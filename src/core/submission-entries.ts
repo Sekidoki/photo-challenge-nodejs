@@ -6,14 +6,20 @@ export type SubmissionEntryAssembly = {
   issues: string[];
 };
 
+const MISSING_REFERENCE_PLACEHOLDERS = new Set([
+  "Adwaita image-missing-symbolic.svg"
+]);
+
 function createMember(entry: SubmissionEntry, role: VotingEntryMemberRole): VotingEntryMember {
   const isExternalReference = role === "reference" && entry.fileName === "Not on Commons";
+  const isMissingReferencePlaceholder = role === "reference"
+    && MISSING_REFERENCE_PLACEHOLDERS.has(entry.fileName);
   return {
     role,
     fileName: isExternalReference ? "Blanco portrait.svg" : entry.fileName,
     title: entry.title,
     sourceUrl: entry.sourceUrl ?? null,
-    displayKind: isExternalReference ? "placeholder" : "commons-file",
+    displayKind: isExternalReference || isMissingReferencePlaceholder ? "placeholder" : "commons-file",
     user: null,
     uploaded: null,
     width: null,

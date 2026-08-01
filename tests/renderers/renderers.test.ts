@@ -153,6 +153,39 @@ test("renderVotingPage renders duo-reference placeholders with an external sourc
   assert.equal(rendered.text.match(/'''Creator:'''/g)?.length, 1);
 });
 
+test("renderVotingPage removes a duo-reference entry whose historical image is only a missing-image placeholder", () => {
+  const reference: VotingEntryMember = {
+    role: "reference",
+    fileName: "Adwaita image-missing-symbolic.svg",
+    title: "Adwaita image-missing-symbolic",
+    sourceUrl: null,
+    displayKind: "placeholder",
+    user: null,
+    uploaded: null,
+    width: null,
+    height: null,
+    comment: null,
+    ownWork: false,
+    exists: true,
+    active: true
+  };
+  const rendered = renderVotingPage("2026 - July - Disaster rephotography", [{
+    mode: "duo-reference",
+    members: [reference, {
+      ...submissionMember("Bargi Dam - Jabalpur.jpg", "Gamerzer"),
+      uploaded: "2026-07-14T07:22:45Z"
+    }]
+  }]);
+
+  assert.equal(rendered.includedCount, 0);
+  assert.equal(rendered.issueCount, 1);
+  assert.doesNotMatch(rendered.text, /id="1"/);
+  assert.match(
+    rendered.text,
+    /REMOVED: \[\[:File:Bargi Dam - Jabalpur\.jpg\]\] has no traceable historical image or external source link\./
+  );
+});
+
 test("renderWinnersPage matches the real First aid winners output for the top three files", () => {
   const scoredFiles = JSON.parse(readFixture("scored-files-first-aid-top3.json")) as Array<{
     num: number;

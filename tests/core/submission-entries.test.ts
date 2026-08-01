@@ -57,3 +57,30 @@ test("assembleVotingEntries maps external duo-reference sources to traceable pla
     { role: "submission", fileName: "Modern.jpg", displayKind: "commons-file", sourceUrl: null }
   ]);
 });
+
+test("assembleVotingEntries marks the Commons missing-image symbol as an untraceable reference placeholder", () => {
+  const assembled = assembleVotingEntries([
+    { fileName: "Adwaita image-missing-symbolic.svg", title: "Adwaita image-missing-symbolic" },
+    { fileName: "Bargi Dam - Jabalpur.jpg", title: "Bargi Dam after the incident" }
+  ], "duo-reference");
+
+  assert.deepEqual(assembled.entries[0]?.members.map((member) => ({
+    role: member.role,
+    fileName: member.fileName,
+    displayKind: member.displayKind,
+    sourceUrl: member.sourceUrl
+  })), [
+    {
+      role: "reference",
+      fileName: "Adwaita image-missing-symbolic.svg",
+      displayKind: "placeholder",
+      sourceUrl: null
+    },
+    {
+      role: "submission",
+      fileName: "Bargi Dam - Jabalpur.jpg",
+      displayKind: "commons-file",
+      sourceUrl: null
+    }
+  ]);
+});

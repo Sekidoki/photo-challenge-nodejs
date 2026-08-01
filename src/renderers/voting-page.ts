@@ -151,7 +151,8 @@ function validateEntry(entry: VotingEntry, window: ResolvedSubmissionWindow): st
     || (reference.displayKind === "placeholder" && reference.sourceUrl)
   ));
   if (!referenceIsTraceable) {
-    return "REMOVED: Duo reference entry has no traceable Commons file or external source link.";
+    const submissionFile = submissions[0]?.fileName ?? "unknown";
+    return `REMOVED: [[:File:${submissionFile}]] has no traceable historical image or external source link.`;
   }
   return validateSubmission(submissions[0], window);
 }
