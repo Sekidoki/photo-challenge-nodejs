@@ -159,7 +159,7 @@ test("listErrors protects unsigned vote source text from MediaWiki pre-save tran
 
   const errors = listErrors(validated, [], challenge).join("\n");
 
-  assert.match(errors, /line was: "<nowiki>\*\{\{0\/3\*\}\} -- ~~~~<\/nowiki>"/);
+  assert.match(errors, /line was: "\*\{\{0\/3\*\}\} -- <nowiki>~~~~<\/nowiki>"/);
 });
 
 test("validateVoters treats low-edit voters listed in submission entrants as notes instead of errors", async () => {

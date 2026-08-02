@@ -1,4 +1,8 @@
-import { isUnexpandedVotePlaceholder, repairVoteBelowMarker } from "../core/voting-wikitext.js";
+import {
+  isUnexpandedVotePlaceholder,
+  protectSignatureTildes,
+  repairVoteBelowMarker
+} from "../core/voting-wikitext.js";
 
 export function reviseVotingPage(wikiText: string): string {
   const collapseText = "{{Collapse top|Current votes – please choose your own winners before looking}}";
@@ -12,7 +16,7 @@ export function reviseVotingPage(wikiText: string): string {
     }
 
     if (isUnexpandedVotePlaceholder(line.trim())) {
-      continue;
+      line = protectSignatureTildes(line);
     }
 
     if (line.startsWith("<!-- '''Creator")) {

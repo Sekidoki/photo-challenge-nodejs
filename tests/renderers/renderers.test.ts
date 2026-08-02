@@ -285,7 +285,7 @@ test("reviseVotingPage matches the current revised output for a historical Orang
   assert.equal(rendered, expected);
 });
 
-test("reviseVotingPage repairs an unclosed vote marker and removes its unexpanded placeholder", () => {
+test("reviseVotingPage repairs an unclosed vote marker and protects its placeholder signature", () => {
   const source = [
     '===<span class="anchor" id="268">268</span>. Hidden votes===',
     "<!-- Vote below this line --",
@@ -297,6 +297,7 @@ test("reviseVotingPage repairs an unclosed vote marker and removes its unexpande
   const rendered = reviseVotingPage(source);
 
   assert.match(rendered, /<!-- Vote below this line -->/);
-  assert.doesNotMatch(rendered, /\*\{\{0\/3\*\}\} -- ~~~~/);
+  assert.match(rendered, /\*\{\{0\/3\*\}\} -- <nowiki>~~~~<\/nowiki>/);
+  assert.doesNotMatch(rendered, /-- ~~~~(?:\r?\n|$)/);
   assert.match(rendered, /\*\{\{3\/3\*\}\} -- \[\[User:ValidVoter/);
 });

@@ -65,7 +65,7 @@ test("parseVotingPage handles the historical live voting-page format from Orange
   assert.equal(parsed.votes[3]?.timestamp, "14:34, 23 March 2026 (UTC)");
 });
 
-test("parseVotingPage repairs an unclosed vote marker and excludes its unexpanded placeholder", () => {
+test("parseVotingPage repairs an unclosed vote marker and preserves its placeholder for validation", () => {
   const wikiText = [
     '===<span class="anchor" id="268">268</span>. Hidden votes===',
     "[[File:Hidden votes.jpg|none|thumb|399px|Hidden votes]]",
@@ -86,6 +86,7 @@ test("parseVotingPage repairs an unclosed vote marker and excludes its unexpande
 
   assert.equal(parsed.entries[0]?.members[0]?.user, "Photographer");
   assert.deepEqual(parsed.votes.map((vote) => ({ num: vote.num, voter: vote.voter })), [
+    { num: 268, voter: "" },
     { num: 268, voter: "HiddenVoter" },
     { num: 269, voter: "VisibleVoter" }
   ]);

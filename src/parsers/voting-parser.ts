@@ -1,5 +1,5 @@
 import type { EntryMode, VotingEntry, VotingEntryMember } from "../core/models.js";
-import { isUnexpandedVotePlaceholder, repairVoteBelowMarker } from "../core/voting-wikitext.js";
+import { repairVoteBelowMarker } from "../core/voting-wikitext.js";
 
 export type VotingChallenge = {
   raw: string;
@@ -429,7 +429,7 @@ export function parseVotingPage(wikiText: string): ParsedVotingPage {
     }
     // Voting pages intentionally keep creator metadata inside inline comments.
     appendCreatorLines(section, metadataLine);
-    if (line.includes("/3*}}") && !isUnexpandedVotePlaceholder(line)) {
+    if (line.includes("/3*}}")) {
       parseVote(section, line);
     }
   }
