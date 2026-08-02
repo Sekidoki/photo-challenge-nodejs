@@ -161,7 +161,10 @@ export function buildValidatedJobRequest(input: JobRequestInput, labels: Validat
     source: parseSourcePageVariant(input.source?.trim() ?? "old", labels.source ?? "--source"),
     credentials: {
       name: input.credentials.name.trim(),
-      botPassword: input.credentials.botPassword
+      botPassword: input.credentials.botPassword,
+      ...(input.credentials.oauthAccessToken
+        ? { oauthAccessToken: input.credentials.oauthAccessToken }
+        : {})
     },
     publishMode: parsePublishMode(input.publishMode?.trim() ?? "dry-run", labels.publishMode ?? "--publish-mode")
   };

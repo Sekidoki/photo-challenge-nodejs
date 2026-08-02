@@ -74,6 +74,7 @@
     </div>
 
     <form method="post" action="/jobs/{{job.id}}/publish" class="publish-form">
+      <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
       <div class="actions">
         <button type="submit">Publish to {{reviewMode}}</button>

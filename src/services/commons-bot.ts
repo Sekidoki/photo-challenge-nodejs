@@ -54,11 +54,17 @@ type CommonsApiRequest = (params: any) => Promise<any>;
 
 export function isCommonsLoginError(error: unknown): boolean {
   return error instanceof Error
-    && error.message.startsWith("Unable to log in to Wikimedia Commons with the provided credentials.");
+    && (
+      error.message.startsWith("Unable to log in to Wikimedia Commons with the provided credentials.")
+      || error.message.startsWith("Unable to authenticate with Wikimedia OAuth:")
+    );
 }
 
 export function toUserFacingCommonsErrorMessage(error: unknown): string {
   if (isCommonsLoginError(error)) {
+    if (error instanceof Error && error.message.startsWith("Unable to authenticate with Wikimedia OAuth:")) {
+      return "Your Wikimedia sign-in expired or is no longer authorized. Sign in again and retry.";
+    }
     return "Incorrect username or bot password. Update the saved sign-in and try again.";
   }
 
@@ -274,6 +280,21 @@ function normalizeTitle(value: string): string {
 }
 
 async function loginWithCandidates(config: CommonsBotConfig): Promise<Mwn> {
+  if (config.credentials.oauthAccessToken) {
+    try {
+      return await Mwn.init({
+        apiUrl: config.apiUrl,
+        userAgent: config.userAgent,
+        OAuth2AccessToken: config.credentials.oauthAccessToken,
+        defaultParams: {
+          assert: "user"
+        }
+      });
+    } catch (error) {
+      throw new Error(`Unable to authenticate with Wikimedia OAuth: ${getErrorMessage(error)}`);
+    }
+  }
+
   const candidates = buildLoginCandidates(config.credentials);
   const errors: string[] = [];
 

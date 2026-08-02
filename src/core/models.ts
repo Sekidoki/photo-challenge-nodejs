@@ -66,6 +66,8 @@ export type ScoredVotingEntry = {
 export type BotCredentials = {
   name: string;
   botPassword: string;
+  /** Short-lived Wikimedia OAuth 2 access token used by the Web UI. Never persist this value in job logs. */
+  oauthAccessToken?: string;
 };
 
 export type JobRequest = {

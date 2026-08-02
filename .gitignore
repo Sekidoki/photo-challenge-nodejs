@@ -3,6 +3,7 @@
 /docs/*
 !/docs/architecture.md
 !/docs/architecture.zh-TW.md
+!/docs/web-frontend-oauth-plan.zh-TW.md
 
 # Environment and local secrets
 .env

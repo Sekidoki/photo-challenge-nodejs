@@ -60,7 +60,7 @@ export async function buildStandardPublishReview(
   if (!bot) {
     return {
       entries: toReviewEntries(job.id, artifacts, new Map()),
-      warning: "A saved BotPassword is required to load the current target pages for diff review. Save the password on the home page, then reopen this screen."
+      warning: "A Wikimedia sign-in or saved BotPassword is required to load the current target pages for diff review. Sign in, then reopen this screen."
     };
   }
 

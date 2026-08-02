@@ -89,11 +89,11 @@ export async function buildMaintenancePublishReview(
         status: "changed",
         statusLabel: "Ready to publish",
         summary: `${entry.liveTargetTitle} -> ${entry.targetTitle}`,
-        diffSummary: "Save a BotPassword on the home page to load live target content before publishing.",
+        diffSummary: "Sign in with Wikimedia or save a BotPassword to load live target content before publishing.",
         selected: selectedIds.length === 0 || selectedIds.includes(entry.id)
       })),
       publishHistory,
-      warning: "A saved BotPassword is required to load live target content for maintenance review and publishing.",
+      warning: "A Wikimedia sign-in or saved BotPassword is required to load live target content for maintenance review and publishing.",
       canPublish: false
     };
   }

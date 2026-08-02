@@ -115,6 +115,18 @@ Web domain/service files:
 
 Handlebars views only render view models. They should not read files, call Commons, or parse maintenance plans.
 
+### Web authentication
+
+The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `src/web/oauth-session.ts` owns authorization state, token exchange/refresh, signed cookies, optional maintainer allowlisting, and CSRF tokens. Access and refresh tokens stay in the server process and must never be written to job logs or artifacts. A Web job copies only the current short-lived access token into its in-memory `JobRequest`.
+
+OAuth and BotPassword deliberately coexist at different entry points:
+
+- Web uses the signed-in maintainer's Wikimedia identity whenever OAuth is configured.
+- CLI continues to use `NAME` and `BOT_PASSWORD`.
+- Local Web development can fall back to the existing BotPassword form when OAuth is not configured.
+
+The in-memory OAuth session store assumes one Toolforge Web replica. Moving to multiple replicas requires a shared encrypted session store before increasing the replica count.
+
 ## 7. Artifacts, Job History, and Publish History
 
 Each job uses a fixed output directory:

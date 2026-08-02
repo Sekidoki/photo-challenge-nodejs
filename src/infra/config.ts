@@ -5,6 +5,18 @@ dotenv.config();
 
 const projectRoot = process.cwd();
 
+function parseCsv(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+const oauthClientId = process.env.WIKIMEDIA_OAUTH_CLIENT_ID?.trim() ?? "";
+const oauthClientSecret = process.env.WIKIMEDIA_OAUTH_CLIENT_SECRET?.trim() ?? "";
+const oauthCallbackUrl = process.env.WIKIMEDIA_OAUTH_CALLBACK_URL?.trim() ?? "";
+const oauthSessionSecret = process.env.WEB_SESSION_SECRET?.trim() ?? "";
+
 export const config = {
   port: Number(process.env.PORT ?? 3000),
   projectRoot,
@@ -13,5 +25,27 @@ export const config = {
   userAgent:
     process.env.USER_AGENT ??
     "photo-challenge-nodejs/0.1.0 (local development; contact via Wikimedia Commons user page)",
-  credentialServiceName: process.env.CREDENTIAL_SERVICE_NAME ?? "photo-challenge-nodejs/commons"
+  credentialServiceName: process.env.CREDENTIAL_SERVICE_NAME ?? "photo-challenge-nodejs/commons",
+  oauth: {
+    clientId: oauthClientId,
+    clientSecret: oauthClientSecret,
+    callbackUrl: oauthCallbackUrl,
+    sessionSecret: oauthSessionSecret,
+    authorizationUrl:
+      process.env.WIKIMEDIA_OAUTH_AUTHORIZATION_URL
+      ?? "https://meta.wikimedia.org/w/rest.php/oauth2/authorize",
+    tokenUrl:
+      process.env.WIKIMEDIA_OAUTH_TOKEN_URL
+      ?? "https://meta.wikimedia.org/w/rest.php/oauth2/access_token",
+    profileUrl:
+      process.env.WIKIMEDIA_OAUTH_PROFILE_URL
+      ?? "https://meta.wikimedia.org/w/rest.php/oauth2/resource/profile",
+    allowedUsers: parseCsv(process.env.WIKIMEDIA_OAUTH_ALLOWED_USERS),
+    configured: Boolean(
+      oauthClientId
+      && oauthClientSecret
+      && oauthCallbackUrl
+      && oauthSessionSecret.length >= 32
+    )
+  }
 };

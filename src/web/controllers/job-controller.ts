@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Request, Response } from "express";
-import type { JobProgress, JobRequest } from "../../core/models.js";
+import type { BotCredentials, JobProgress, JobRequest } from "../../core/models.js";
 import {
   DEFAULT_JOB_ACTION,
   buildValidatedJobRequest,
@@ -30,6 +30,7 @@ import { buildMaintenancePublishReview } from "../maintenance-publish-review.js"
 import { buildPublishableArtifacts } from "../publish-review.js";
 import { buildStandardPublishReview, toStandardPublishPlan } from "../standard-publish-review.js";
 import { buildHomePageViewModel } from "./home-controller.js";
+import { getOAuthSession, isOAuthConfigured, validateCsrfToken } from "../oauth-session.js";
 
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
@@ -93,39 +94,60 @@ async function getJobSnapshot(jobId: string): Promise<JobProgress | null> {
 
 export async function createJob(request: Request, response: Response) {
   const body = request.body as Record<string, unknown>;
+  const oauthSession = await getOAuthSession(request, response);
+  const oauthRequired = isOAuthConfigured();
+  if (oauthRequired && (!oauthSession || !validateCsrfToken(oauthSession, body.csrfToken))) {
+    response.status(oauthSession ? 403 : 401).render(
+      "home",
+      await buildHomePageViewModel({
+        error: oauthSession
+          ? "The form expired or could not be verified. Reload the page and try again."
+          : "Sign in with Wikimedia before starting a job.",
+        oauthUserName: oauthSession?.userName ?? null,
+        defaults: buildHomeDefaults(body)
+      })
+    );
+    return;
+  }
+
+  const authenticatedBody = oauthSession
+    ? { ...body, name: oauthSession.userName, botPassword: "" }
+    : body;
   let jobRequest: JobRequest;
   try {
-    jobRequest = buildJobRequest(body);
+    jobRequest = buildJobRequest(authenticatedBody);
+    if (oauthSession) {
+      jobRequest.credentials.oauthAccessToken = oauthSession.accessToken;
+    }
   } catch (error) {
     response.status(400).render(
       "home",
       await buildHomePageViewModel({
         error: error instanceof Error ? error.message : "Invalid voting page settings.",
-        defaults: {
-          name: String(body.name ?? "").trim(),
-          challenge: String(body.challenge ?? "").trim(),
-          pairedChallenge: String(body.pairedChallenge ?? "").trim(),
-          entryMode: String(body.entryMode ?? "single"),
-          submissionStart: String(body.submissionStart ?? "").trim(),
-          submissionEnd: String(body.submissionEnd ?? "").trim(),
-          action: String(body.action ?? DEFAULT_JOB_ACTION),
-          publishMode: String(body.publishMode ?? "dry-run")
-        }
+        oauthUserName: oauthSession?.userName ?? null,
+        defaults: buildHomeDefaults(authenticatedBody)
       })
     );
     return;
   }
   const rememberRequested = shouldRememberCredential(body);
 
-  if (!jobRequest.credentials.botPassword && jobRequest.credentials.name) {
+  if (!jobRequest.credentials.oauthAccessToken && !jobRequest.credentials.botPassword && jobRequest.credentials.name) {
     jobRequest.credentials.botPassword = (await getCredentialPassword(jobRequest.credentials.name)) ?? "";
   }
 
-  if (!jobRequest.challenge || !jobRequest.credentials.name || !jobRequest.credentials.botPassword) {
+  if (
+    !jobRequest.challenge
+    || !jobRequest.credentials.name
+    || (!jobRequest.credentials.botPassword && !jobRequest.credentials.oauthAccessToken)
+  ) {
     response.status(400).render(
       "home",
       await buildHomePageViewModel({
-        error: "Name, stored Bot Password, and Challenge are required. Enter a password or save one for this machine.",
+        error: oauthRequired
+          ? "A Wikimedia sign-in and Challenge are required."
+          : "Name, stored Bot Password, and Challenge are required. Enter a password or save one for this machine.",
+        oauthUserName: oauthSession?.userName ?? null,
         defaults: {
           name: jobRequest.credentials.name,
           challenge: jobRequest.challenge,
@@ -141,7 +163,7 @@ export async function createJob(request: Request, response: Response) {
     return;
   }
 
-  if (rememberRequested) {
+  if (rememberRequested && !jobRequest.credentials.oauthAccessToken) {
     await rememberCredential(jobRequest.credentials.name, jobRequest.credentials.botPassword);
   }
 
@@ -220,13 +242,14 @@ export async function renderPublishReview(request: Request, response: Response) 
     }
 
     const mode = getReviewMode(request.query.mode, job);
-    const loginName = resolveLoginName(job);
+    const credentials = await resolveWebCredentials(request, response, job);
+    const loginName = credentials?.name ?? resolveLoginName(job);
     const generatedFiles = await loadGeneratedFiles(job.id);
     const review = await buildStandardPublishReview(
       job,
       mode,
       loginName,
-      await createReviewBot(loginName),
+      await createReviewBot(credentials),
       generatedFiles
     );
 
@@ -268,14 +291,15 @@ export async function renderMaintenanceReview(request: Request, response: Respon
 
     const mode = getReviewMode(request.query.mode, job) as MaintenancePublishMode;
     const selectedIds = normalizeSelectedValues(request.query.selected);
-    const loginName = resolveLoginName(job);
+    const credentials = await resolveWebCredentials(request, response, job);
+    const loginName = credentials?.name ?? resolveLoginName(job);
     const generatedFiles = await loadGeneratedFiles(job.id);
     const review = await buildMaintenancePublishReview(
       job,
       mode,
       selectedIds,
       loginName,
-      await createReviewBot(loginName),
+      await createReviewBot(credentials),
       generatedFiles
     );
 
@@ -318,18 +342,18 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
 
   const body = request.body as Record<string, unknown>;
   const mode = getReviewMode(body.mode ?? request.query.mode, job) as MaintenancePublishMode;
+  const credentials = await resolveWebCredentials(request, response, job);
+  if (!credentials || !(await validateWriteRequest(request, response))) {
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("Sign in with Wikimedia again before publishing.")}`);
+    return;
+  }
   const selectedIds = normalizeSelectedValues(body.selected);
   if (selectedIds.length === 0) {
     response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("Select at least one maintenance entry to publish.")}`);
     return;
   }
 
-  const loginName = resolveLoginName(job);
-  const botPassword = await resolveBotPassword(loginName);
-  if (!loginName || !botPassword) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("A saved BotPassword is required before maintenance publish can proceed.")}`);
-    return;
-  }
+  const loginName = credentials.name;
 
   const generatedFiles = await loadGeneratedFiles(job.id);
   const planFile = generatedFiles.find((artifact) => artifact.name.endsWith("_maintenance_plan.json"));
@@ -356,7 +380,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
     bot = await createCommonsBot({
       apiUrl: config.commonsApiUrl,
       userAgent: config.userAgent,
-      credentials: { name: loginName, botPassword }
+      credentials
     });
   } catch (error) {
     response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
@@ -392,13 +416,12 @@ export async function publishJobOutputs(request: Request, response: Response) {
 
   const body = request.body as Record<string, unknown>;
   const mode = getReviewMode(body.mode ?? request.query.mode, job);
-  const loginName = resolveLoginName(job);
-  const botPassword = await resolveBotPassword(loginName);
-
-  if (!loginName || !botPassword) {
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent("A saved BotPassword is required before Web publish can proceed.")}`);
+  const credentials = await resolveWebCredentials(request, response, job);
+  if (!credentials || !(await validateWriteRequest(request, response))) {
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent("Sign in with Wikimedia again before publishing.")}`);
     return;
   }
+  const loginName = credentials.name;
 
   const generatedFiles = await loadGeneratedFiles(job.id);
   const artifacts = buildPublishableArtifacts({ ...job, loginName }, generatedFiles, mode);
@@ -412,7 +435,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
     bot = await createCommonsBot({
       apiUrl: config.commonsApiUrl,
       userAgent: config.userAgent,
-      credentials: { name: loginName, botPassword }
+      credentials
     });
   } catch (error) {
     response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
@@ -508,15 +531,51 @@ async function resolveBotPassword(loginName: string): Promise<string> {
   return "";
 }
 
-async function createReviewBot(loginName: string) {
-  const botPassword = await resolveBotPassword(loginName);
-  if (!loginName || !botPassword) {
+async function createReviewBot(credentials: BotCredentials | null) {
+  if (!credentials) {
     return null;
   }
 
   return createCommonsBot({
     apiUrl: config.commonsApiUrl,
     userAgent: config.userAgent,
-    credentials: { name: loginName, botPassword }
+    credentials
   });
+}
+
+async function resolveWebCredentials(
+  request: Request,
+  response: Response,
+  job: JobProgress
+): Promise<BotCredentials | null> {
+  if (isOAuthConfigured()) {
+    const session = await getOAuthSession(request, response);
+    return session
+      ? { name: session.userName, botPassword: "", oauthAccessToken: session.accessToken }
+      : null;
+  }
+
+  const loginName = resolveLoginName(job);
+  const botPassword = await resolveBotPassword(loginName);
+  return loginName && botPassword ? { name: loginName, botPassword } : null;
+}
+
+async function validateWriteRequest(request: Request, response: Response): Promise<boolean> {
+  if (!isOAuthConfigured()) return true;
+  const session = await getOAuthSession(request, response);
+  const body = request.body as Record<string, unknown>;
+  return Boolean(session && validateCsrfToken(session, body.csrfToken));
+}
+
+function buildHomeDefaults(body: Record<string, unknown>) {
+  return {
+    name: String(body.name ?? "").trim(),
+    challenge: String(body.challenge ?? "").trim(),
+    pairedChallenge: String(body.pairedChallenge ?? "").trim(),
+    entryMode: String(body.entryMode ?? "single"),
+    submissionStart: String(body.submissionStart ?? "").trim(),
+    submissionEnd: String(body.submissionEnd ?? "").trim(),
+    action: String(body.action ?? DEFAULT_JOB_ACTION),
+    publishMode: String(body.publishMode ?? "dry-run")
+  };
 }

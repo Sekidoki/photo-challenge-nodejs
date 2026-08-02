@@ -115,6 +115,18 @@ Web domain/service 檔案：
 
 Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解析 maintenance plan。
 
+### Web 登入
+
+部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、可選的維護者 allowlist，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
+
+OAuth 與 BotPassword 刻意分別服務不同入口：
+
+- 啟用 OAuth 時，Web 一律使用目前登入維護者的 Wikimedia 身分。
+- CLI 繼續使用 `NAME` 與 `BOT_PASSWORD`。
+- 本機 Web 若未設定 OAuth，仍可使用既有 BotPassword 表單。
+
+目前 OAuth session store 位於記憶體，因此 Toolforge Web service 應維持單一 replica。若將來要擴為多 replica，必須先加入共享且加密的 session store。
+
 ## 7. Artifact、Job History 與 Publish History
 
 每個 job 使用固定輸出目錄：

@@ -25,6 +25,18 @@ test("buildValidatedJobRequest builds typed job requests for the vote-counting w
   assert.equal(request.publishMode, "dry-run");
 });
 
+test("buildValidatedJobRequest preserves an in-memory OAuth access token", () => {
+  const request = buildValidatedJobRequest({
+    action: DEFAULT_JOB_ACTION,
+    challenge: "2026 - February - Orange",
+    credentials: { name: "OAuth User", botPassword: "", oauthAccessToken: "short-lived-token" }
+  });
+
+  assert.equal(request.credentials.name, "OAuth User");
+  assert.equal(request.credentials.botPassword, "");
+  assert.equal(request.credentials.oauthAccessToken, "short-lived-token");
+});
+
 test("buildValidatedJobRequest rejects legacy process-challenge for new jobs", () => {
   assert.throws(
     () => buildValidatedJobRequest({

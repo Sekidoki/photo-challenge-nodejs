@@ -63,6 +63,7 @@
   <h2>Publishable follow-up entries</h2>
   {{#if reviewEntries.length}}
     <form method="post" action="/jobs/{{job.id}}/maintenance-publish" class="maintenance-publish-form">
+      <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
       <div class="maintenance-review-grid">
         {{#each reviewEntries}}

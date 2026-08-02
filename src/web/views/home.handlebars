@@ -1,28 +1,55 @@
 <section class="panel">
   <h1>Photo Challenge Runner</h1>
-  <p class="lede">Start a first-pass workflow with Wikimedia Commons bot credentials and store all artifacts in a fixed output directory.</p>
+  <p class="lede">Prepare, review, and publish Wikimedia Commons Photo Challenge maintenance jobs.</p>
 
+  {{#if oauthConfigured}}
   <section class="credential-card">
     <div class="panel-header">
       <div>
-        <h2>Saved Sign-in</h2>
-        <p class="lede">Bot passwords are stored in a cross-platform credential store when available, and fall back to this process only if the system keychain is unavailable.</p>
+        <h2>Wikimedia Sign-in</h2>
+        {{#if oauthUser}}
+          <p class="lede">Jobs and published edits use your Wikimedia account and the permissions you approved.</p>
+        {{else}}
+          <p class="lede">Sign in before starting a job. The tool never receives your Wikimedia password.</p>
+        {{/if}}
       </div>
     </div>
 
-    <dl class="details details-compact">
-      <div><dt>Storage</dt><dd>{{credentialStore.backendLabel}}</dd></div>
-      <div><dt>Persists</dt><dd>{{#if credentialStore.canPersistAcrossRestarts}}Yes{{else}}No, this session only{{/if}}</dd></div>
-      <div><dt>Saved name</dt><dd>{{#if savedCredential}}<code>{{savedCredential.name}}</code>{{else}}No saved sign-in{{/if}}</dd></div>
-    </dl>
-
-    {{#if savedCredential}}
-      <form method="post" action="/credentials/clear" class="inline-form-actions">
-        <input type="hidden" name="name" value="{{savedCredential.name}}" />
-        <button type="submit">Clear saved password</button>
-      </form>
+    {{#if oauthUser}}
+      <dl class="details details-compact">
+        <div><dt>Account</dt><dd><code>{{oauthUser.name}}</code></dd></div>
+        <div><dt>Credential storage</dt><dd>Server-side session only</dd></div>
+      </dl>
+    {{else}}
+      <div class="form-actions">
+        <a class="button-link" href="/auth/login">Sign in with Wikimedia</a>
+      </div>
     {{/if}}
   </section>
+  {{else}}
+    <section class="credential-card">
+      <div class="panel-header">
+        <div>
+          <h2>Local BotPassword sign-in</h2>
+          <p class="lede">OAuth is not configured, so this instance uses the existing local credential store.</p>
+        </div>
+      </div>
+      <dl class="details details-compact">
+        <div><dt>Storage</dt><dd>{{credentialStore.backendLabel}}</dd></div>
+        <div><dt>Persists</dt><dd>{{#if credentialStore.canPersistAcrossRestarts}}Yes{{else}}No, this session only{{/if}}</dd></div>
+        <div><dt>Saved name</dt><dd>{{#if savedCredential}}<code>{{savedCredential.name}}</code>{{else}}No saved sign-in{{/if}}</dd></div>
+      </dl>
+      {{#if savedCredential}}
+        <form method="post" action="/credentials/clear" class="inline-form-actions">
+          <input type="hidden" name="name" value="{{savedCredential.name}}" />
+          <button type="submit">Clear saved password</button>
+        </form>
+      {{/if}}
+    </section>
+    {{#if oauthConfigurationMessage}}
+      <div class="notice">{{oauthConfigurationMessage}}</div>
+    {{/if}}
+  {{/if}}
 
   {{#if recentCompletedJob}}
     <section class="recent-job-card">
@@ -87,6 +114,10 @@
   {{/if}}
 
   <form method="post" action="/jobs" class="form-grid">
+    {{#if oauthConfigured}}
+      <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
+    {{/if}}
+    {{#unless oauthConfigured}}
     <label>
       <span>Name</span>
       <input name="name" type="text" value="{{defaults.name}}" required />
@@ -103,6 +134,7 @@
       <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
       <span>Remember this password on this machine</span>
     </label>
+    {{/unless}}
 
     <label>
       <span>Challenge</span>
@@ -210,7 +242,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit">Start job</button>
+      <button type="submit" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>Start job</button>
+      {{#if oauthConfigured}}{{#unless oauthUser}}<a class="button-link" href="/auth/login">Sign in to continue</a>{{/unless}}{{/if}}
     </div>
   </form>
 </section>

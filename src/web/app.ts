@@ -3,6 +3,8 @@ import express from "express";
 import { create } from "express-handlebars";
 import { indexRouter } from "./routes/index.js";
 import { jobsRouter } from "./routes/jobs.js";
+import { authRouter } from "./routes/auth.js";
+import { getOAuthSession, isOAuthConfigured } from "./oauth-session.js";
 
 export function createApp() {
   const app = express();
@@ -26,6 +28,19 @@ export function createApp() {
   app.use(express.json());
   app.use("/static", express.static(path.join(process.cwd(), "src", "web", "public")));
 
+  app.use(async (request, response, next) => {
+    try {
+      const oauthSession = await getOAuthSession(request, response);
+      response.locals.oauthConfigured = isOAuthConfigured();
+      response.locals.oauthUser = oauthSession ? { name: oauthSession.userName } : null;
+      response.locals.csrfToken = oauthSession?.csrfToken ?? "";
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.use("/auth", authRouter);
   app.use("/", indexRouter);
   app.use("/jobs", jobsRouter);
 

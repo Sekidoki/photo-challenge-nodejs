@@ -12,13 +12,15 @@
 
 - Node.js `26.5.0`
 - npm `11` 或更新版本
-- Wikimedia Commons BotPassword 帳號
+- CLI 使用 Wikimedia Commons BotPassword；共享 Web 部署則使用 Wikimedia OAuth 2 client
 
 基本設定：
 - 將 `.env.example` 複製為 `.env`
 - `NAME` 填入完整 BotPassword 登入名稱，例如 `MainAccount@BotAppName`
 - 設定 `BOT_PASSWORD`
 - 視需要設定 `USER_AGENT`、`PORT`、`CREDENTIAL_SERVICE_NAME`
+
+共享 Web 部署時，請在 Meta-Wiki 註冊 confidential OAuth 2 application，callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons；如要限定維護者，可用逗號分隔的 `WIKIMEDIA_OAUTH_ALLOWED_USERS`。
 
 ## 安裝
 
@@ -76,6 +78,7 @@ Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間
 - `post-results-maintenance` 已支援 `dry-run`、`sandbox`、`live`，可正式發佈得獎通知、central announcement、Previous-page update 與檔案頁模板
 - `sandbox` 目標頁會依 `NAME` 中 `@` 前的主帳號名稱自動推導
 - 已保存的登入資訊優先走系統 keychain，若不可用則退回本次程式執行期間的記憶體保存
+- 啟用 OAuth 後，Web job 與 publish 使用目前登入維護者的短期 OAuth token；CLI 仍維持 BotPassword
 - job history 會從 `output/jobs/*/logs/job.log` 重建
 
 ## 驗證與排錯
@@ -106,6 +109,7 @@ npm test
 
 維護者文件：
 - 正式架構與責任邊界：[docs/architecture.zh-TW.md](docs/architecture.zh-TW.md)
+- Toolforge 比較、前端方案與 OAuth 上線步驟：[docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 建議下一步：
 - 補 deployment / operations 文件，支援非本機單人使用情境

@@ -10,6 +10,7 @@ import "./parsers/voting-parser.test.js";
 import "./renderers/renderers.test.js";
 import "./renderers/voting-index.test.js";
 import "./web/maintenance-review.test.js";
+import "./web/oauth-session.test.js";
 import "./web/publish-review.test.js";
 import "./workflows/maintenance-publish.test.js";
 import "./workflows/post-results-maintenance.test.js";

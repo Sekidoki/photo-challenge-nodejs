@@ -7,6 +7,22 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-brand" href="/">Photo Challenge</a>
+        <nav class="site-account" aria-label="Account">
+          {{#if oauthUser}}
+            <span>Signed in as <strong>{{oauthUser.name}}</strong></span>
+            <form method="post" action="/auth/logout">
+              <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
+              <button type="submit" class="button-quiet">Sign out</button>
+            </form>
+          {{else if oauthConfigured}}
+            <a class="button-link" href="/auth/login">Sign in with Wikimedia</a>
+          {{/if}}
+        </nav>
+      </div>
+    </header>
     <main class="shell">
       {{{body}}}
     </main>

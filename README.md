@@ -12,13 +12,15 @@ It provides a Web UI and CLI for three common workflows:
 
 - Node.js `26.5.0`
 - npm `11` or newer
-- A Wikimedia Commons BotPassword login
+- A Wikimedia Commons BotPassword login for the CLI, or a Wikimedia OAuth 2 client for a deployed Web UI
 
 Setup details:
 - copy `.env.example` to `.env`
 - set `NAME` to your full BotPassword login such as `MainAccount@BotAppName`
 - set `BOT_PASSWORD`
 - optional: set `USER_AGENT`, `PORT`, and `CREDENTIAL_SERVICE_NAME`
+
+For a shared Web deployment, register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`, then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. `WIKIMEDIA_OAUTH_ALLOWED_USERS` can optionally restrict access to a comma-separated maintainer list.
 
 ## Install
 
@@ -76,6 +78,7 @@ It creates winner notifications, challenge announcements, Previous-page updates,
 - `post-results-maintenance` supports `dry-run`, `sandbox`, and `live` for winner notifications, central announcements, Previous-page updates, and file assessment templates
 - sandbox targets are derived from the main account part before `@` in `NAME`
 - saved credentials use the system keychain when available, with in-memory fallback for the current process
+- when OAuth is configured, Web jobs and publishes use the signed-in maintainer's short-lived OAuth token; the CLI continues to use BotPassword
 - job history is rebuilt from `output/jobs/*/logs/job.log`
 
 ## Validation and Troubleshooting
@@ -106,6 +109,7 @@ Implemented and working today:
 
 Maintainer docs:
 - Architecture and responsibility boundaries: [docs/architecture.md](docs/architecture.md)
+- Toolforge comparison, frontend plan, and OAuth rollout: [docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 Recommended next steps:
 - add deployment and operations documentation for non-local usage
