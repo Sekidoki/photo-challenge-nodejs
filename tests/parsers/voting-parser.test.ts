@@ -65,6 +65,32 @@ test("parseVotingPage handles the historical live voting-page format from Orange
   assert.equal(parsed.votes[3]?.timestamp, "14:34, 23 March 2026 (UTC)");
 });
 
+test("parseVotingPage repairs an unclosed vote marker and excludes its unexpanded placeholder", () => {
+  const wikiText = [
+    '===<span class="anchor" id="268">268</span>. Hidden votes===',
+    "[[File:Hidden votes.jpg|none|thumb|399px|Hidden votes]]",
+    "<!-- '''Creator:''' [[User:Photographer|Photographer]] --> '''Uploaded:''' 2026-06-03",
+    "<!-- Vote below this line --",
+    "*{{0/3*}} -- ~~~~",
+    "*{{3/3*}} -- [[User:HiddenVoter|HiddenVoter]] 12:00, 1 July 2026 (UTC)",
+    "<!-- Vote above this line -->",
+    '===<span class="anchor" id="269">269</span>. Visible vote===',
+    "[[File:Visible vote.jpg|none|thumb|399px|Visible vote]]",
+    "<!-- '''Creator:''' [[User:OtherPhotographer|OtherPhotographer]] --> '''Uploaded:''' 2026-06-03",
+    "<!-- Vote below this line -->",
+    "*{{2/3*}} -- [[User:VisibleVoter|VisibleVoter]] 13:00, 1 July 2026 (UTC)",
+    "<!-- Vote above this line -->"
+  ].join("\n");
+
+  const parsed = parseVotingPage(wikiText);
+
+  assert.equal(parsed.entries[0]?.members[0]?.user, "Photographer");
+  assert.deepEqual(parsed.votes.map((vote) => ({ num: vote.num, voter: vote.voter })), [
+    { num: 268, voter: "HiddenVoter" },
+    { num: 269, voter: "VisibleVoter" }
+  ]);
+});
+
 test("parseVotingPage strips language prefixes and template braces from wrapped file captions", () => {
   const wikiText = [
     '===<span class="anchor" id="48">48</span>. Swing ride at the Wurstmarkt Dürkheim===',

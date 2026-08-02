@@ -1,11 +1,17 @@
+import { isUnexpandedVotePlaceholder, repairVoteBelowMarker } from "../core/voting-wikitext.js";
+
 export function reviseVotingPage(wikiText: string): string {
   const collapseText = "{{Collapse top|Current votes – please choose your own winners before looking}}";
   const lines = ["{{Discussion top}}"]; 
 
   for (const rawLine of wikiText.split(/\r?\n/)) {
-    let line = rawLine;
+    let line = repairVoteBelowMarker(rawLine);
 
     if (line.startsWith("{{Discussion top}}") || line.startsWith("{{Discussion bottom}}")) {
+      continue;
+    }
+
+    if (isUnexpandedVotePlaceholder(line.trim())) {
       continue;
     }
 

@@ -1,4 +1,5 @@
 import type { EntryMode, VotingEntry, VotingEntryMember } from "../core/models.js";
+import { isUnexpandedVotePlaceholder, repairVoteBelowMarker } from "../core/voting-wikitext.js";
 
 export type VotingChallenge = {
   raw: string;
@@ -44,6 +45,36 @@ type VotingSectionBuilder = {
 
 function stripComments(text: string): string {
   return text.replace(/<!--([\s\S]*?)-->/g, "");
+}
+
+function stripCommentsFromLine(line: string, startsInComment: boolean): { text: string; endsInComment: boolean } {
+  let text = "";
+  let index = 0;
+  let inComment = startsInComment;
+
+  while (index < line.length) {
+    if (inComment) {
+      const commentEnd = line.indexOf("-->", index);
+      if (commentEnd < 0) {
+        return { text, endsInComment: true };
+      }
+      inComment = false;
+      index = commentEnd + 3;
+      continue;
+    }
+
+    const commentStart = line.indexOf("<!--", index);
+    if (commentStart < 0) {
+      text += line.slice(index);
+      break;
+    }
+
+    text += line.slice(index, commentStart);
+    inComment = true;
+    index = commentStart + 4;
+  }
+
+  return { text, endsInComment: inComment };
 }
 
 function substr(pattern: RegExp, text: string): string {
@@ -367,9 +398,14 @@ export function parseVotingChallenges(wikiText: string): VotingChallenge[] {
 export function parseVotingPage(wikiText: string): ParsedVotingPage {
   const sections: VotingSectionBuilder[] = [];
   let section: VotingSectionBuilder | null = null;
+  let inComment = false;
 
   for (const rawLine of wikiText.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    const repairedLine = repairVoteBelowMarker(rawLine);
+    const visible = stripCommentsFromLine(repairedLine, inComment);
+    inComment = visible.endsInComment;
+    const line = visible.text.trim();
+    const metadataLine = repairedLine.trim();
 
     if (line.startsWith("===")) {
       if (section) {
@@ -391,8 +427,9 @@ export function parseVotingPage(wikiText: string): ParsedVotingPage {
     if (line.includes("[[File:")) {
       appendFileMembers(section, line);
     }
-    appendCreatorLines(section, line);
-    if (line.includes("/3*}}")) {
+    // Voting pages intentionally keep creator metadata inside inline comments.
+    appendCreatorLines(section, metadataLine);
+    if (line.includes("/3*}}") && !isUnexpandedVotePlaceholder(line)) {
       parseVote(section, line);
     }
   }

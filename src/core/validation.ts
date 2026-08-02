@@ -21,6 +21,10 @@ export type VoteWithError = {
   error: number;
 };
 
+function renderLiteralWikiText(value: string): string {
+  return `<nowiki>${value.replace(/<\/nowiki>/gi, "&lt;/nowiki&gt;")}</nowiki>`;
+}
+
 function isVoteAfterDeadline(timestamp: string | null, deadline: DateTime): boolean {
   if (!timestamp) {
     return false;
@@ -140,7 +144,7 @@ export function listErrors(
         errors.push(`* [[User:${vote.voter}]] voted more than once for ${image} -> subsequent votes were not counted`);
         break;
       case 6:
-        errors.push(`* Unsigned vote for ${image} was detected -> it was not counted (line was: "${vote.line}")`);
+        errors.push(`* Unsigned vote for ${image} was detected -> it was not counted (line was: "${renderLiteralWikiText(vote.line)}")`);
         break;
       case 7:
         errors.push(`* [[User:${vote.voter}]] voted for their own ${image} -> their vote was not counted`);

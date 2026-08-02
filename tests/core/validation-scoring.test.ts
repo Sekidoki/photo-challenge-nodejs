@@ -147,6 +147,21 @@ test("validateVotes flags late votes and duplicate award usage while keeping val
   assert.match(errors, /\[\[User:BorderlineEntrant\]\] made less than required 50 edits on Commons/);
 });
 
+test("listErrors protects unsigned vote source text from MediaWiki pre-save transforms", () => {
+  const validated = validateVotes([{
+    num: 268,
+    award: 0,
+    voter: "",
+    creator: "Photographer",
+    line: "*{{0/3*}} -- ~~~~",
+    timestamp: null
+  }], [], challenge);
+
+  const errors = listErrors(validated, [], challenge).join("\n");
+
+  assert.match(errors, /line was: "<nowiki>\*\{\{0\/3\*\}\} -- ~~~~<\/nowiki>"/);
+});
+
 test("validateVoters treats low-edit voters listed in submission entrants as notes instead of errors", async () => {
   const fakeBot: CommonsBot = {
     async readPage() { throw new Error("not used"); },
