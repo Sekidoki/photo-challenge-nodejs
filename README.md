@@ -112,7 +112,7 @@ Maintainer docs:
 - Toolforge comparison, frontend plan, and OAuth rollout: [docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 Recommended next steps:
-- add deployment and operations documentation for non-local usage
+- add a shared encrypted session store before increasing the Toolforge replica count
 - expand fixtures for older Commons page variants and unusual signatures
 - add end-to-end Web flow coverage for create-voting, count-votes-and-select-winners, and maintenance publish
 - consider finer-grained inline word diff inside changed lines

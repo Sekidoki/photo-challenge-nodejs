@@ -31,6 +31,8 @@ import { buildStandardPublishReview, toStandardPublishPlan } from "../standard-p
 import { buildHomePageViewModel } from "./home-controller.js";
 import { getOAuthSession, isOAuthConfigured, validateCsrfToken } from "../oauth-session.js";
 import { createTranslator, getRequestLocale, type Translator } from "../i18n.js";
+import { recordOperationalEvent } from "../../infra/operational-events.js";
+import type { PublishAuditContext } from "../../infra/publish-audit.js";
 
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
@@ -404,6 +406,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
       credentials
     });
   } catch (error) {
+    recordPublishAuthenticationFailure(job, mode, credentials);
     response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
     return;
   }
@@ -417,7 +420,8 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
       if (jobStore.get(job.id)) {
         jobStore.appendMessage(job.id, message);
       }
-    }
+    },
+    buildWebPublishAuditContext(job, mode, credentials)
   );
   const skipped = result.skippedTotal > 0 ? t("publish.notice.skipped", { count: result.skippedTotal }) : "";
   response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.notice.maintenancePublished", {
@@ -464,6 +468,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
       credentials
     });
   } catch (error) {
+    recordPublishAuthenticationFailure(job, mode, credentials);
     response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
     return;
   }
@@ -475,7 +480,8 @@ export async function publishJobOutputs(request: Request, response: Response) {
       if (jobStore.get(job.id)) {
         jobStore.appendMessage(job.id, message);
       }
-    }
+    },
+    buildWebPublishAuditContext(job, mode, credentials)
   );
 
   response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.notice.pagesPublished", {
@@ -624,4 +630,32 @@ function buildPublishContext(
     targetCount,
     isLive: mode === "live"
   };
+}
+
+function buildWebPublishAuditContext(
+  job: JobProgress,
+  mode: "sandbox" | "live",
+  credentials: BotCredentials
+): PublishAuditContext {
+  return {
+    jobId: job.id,
+    workflow: job.action,
+    operator: credentials.name,
+    oauthConsumer: credentials.oauthAccessToken ? config.oauth.clientId : null,
+    mode
+  };
+}
+
+function recordPublishAuthenticationFailure(
+  job: JobProgress,
+  mode: "sandbox" | "live",
+  credentials: BotCredentials
+): void {
+  const auditContext = buildWebPublishAuditContext(job, mode, credentials);
+  recordOperationalEvent({
+    event: "publish.failure",
+    outcome: "failure",
+    ...auditContext,
+    failureStage: "authentication"
+  });
 }

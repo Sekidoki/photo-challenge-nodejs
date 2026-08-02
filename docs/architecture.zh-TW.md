@@ -127,6 +127,8 @@ OAuth 與 BotPassword 刻意分別服務不同入口：
 
 目前 OAuth session store 位於記憶體，因此 Toolforge Web service 應維持單一 replica。若將來要擴為多 replica，必須先加入共享且加密的 session store。
 
+`oauth-http.test.ts` 會從 HTTP 邊界驗證 OAuth callback、CSRF 拒絕與 access-token refresh。OAuth 登入或 refresh 失敗只會產生已定型的 operational event，不記錄原始錯誤、token、完整 user agent 或 IP。
+
 ## 7. Artifact、Job History 與 Publish History
 
 每個 job 使用固定輸出目錄：
@@ -136,15 +138,19 @@ output/jobs/<job-id>/
   input/
   generated/
   logs/job.log
+  logs/publish-audit.jsonl
 ```
 
 - `input/`：從 Commons 讀取的來源頁。
 - `generated/`：workflow 產生的 wikitext、JSON plan、summary、publish history。
 - `logs/job.log`：job history 可重建的最小 metadata。
+- `logs/publish-audit.jsonl`：append-only 的 publish 成功、失敗與 no-op skip 結構化紀錄。欄位包含操作者、OAuth consumer、模式、目標、revision ID、時間、workflow 與結果，但不包含憑證或 OAuth token。
 
 `src/infra/job-history.ts` 會從 `logs/job.log` 重建過去 job。修改 log 欄位時要考慮舊 job 相容性。
 
-Maintenance publish history 存在 `generated/maintenance_publish_history.json`，由 `publish-service.ts` 透過 `recordMaintenancePublish` 寫入。
+Maintenance publish history 存在 `generated/maintenance_publish_history.json`，由 `publish-service.ts` 透過 `recordMaintenancePublish` 寫入；新紀錄也包含 operator 與 OAuth consumer。`operational-events.ts` 會輸出可供 Toolforge logs 監控的登入失敗、refresh 失敗、publish failure、audit write failure 與 job duration 事件。
+
+在 Toolforge，`config.ts` 會使用 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`，使 job artifact 與 audit 在 Pod 重啟後仍保留；`PHOTO_CHALLENGE_DATA_ROOT` 可明確覆寫資料根目錄。部署時必須掛載持久儲存並維持單一 replica；營運要求統一定義於第 11 節。
 
 ## 8. Action 與命名政策
 
@@ -180,7 +186,86 @@ npm test
 - `workflow-integration.test.ts`：offline generated artifacts 不變。
 - `publish-review.test.ts`、`maintenance-review.test.ts`：Web review service view model。
 - `publish-service.test.ts`：publish save、skip、history 行為。
+- `oauth-http.test.ts`：透過真實 Express HTTP route 驗證 OAuth callback、CSRF 拒絕與 session refresh。
 - `maintenance-publish.test.ts`：maintenance plan guard 與 edit application。
 - Parser、renderer、scoring tests：保護 Commons wikitext 相容性。
 
 新增或調整 parser/renderer 時，應補 fixture 或 snapshot-like assertions，因為 Commons wikitext 輸出是最重要的相容性表面。
+
+## 11. Toolforge 部署與營運
+
+Toolforge deployment 屬於系統架構的一部分，因為 authentication session、持久 job data 與 publish auditability 都受 service topology 影響。版本庫內的 `toolforge/service.template` 是基準設定：
+
+- 使用 `type: buildservice` 與 `mount: all`，由 Toolforge 建置程式並掛載持久 NFS 儲存。
+- 使用 `replicas: 1`，因為 OAuth session 與 token 只存在單一 process。導入共享且加密的 session store 前不得增加 replica。
+- 使用 `health-check-path: /healthz`，基準資源為 `500m` CPU、`512Mi` memory。
+- Job data 預設放在 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`；只有需要明確替代的持久路徑時才設定 `PHOTO_CHALLENGE_DATA_ROOT`。
+
+### 部署設定與 secret
+
+部署前執行 `npm ci`、`npm run check`、`npm run check:test`、`npm test` 與 `npm run build`。Wikimedia OAuth consumer 必須登記完全相符的 callback：`https://<tool-name>.toolforge.org/auth/callback`。
+
+Production 設定應以互動提示建立，避免 secret 出現在 shell history 或 process argument：
+
+```bash
+toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
+toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
+toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL
+toolforge envvars create WEB_SESSION_SECRET
+toolforge envvars create WIKIMEDIA_OAUTH_ALLOWED_USERS
+toolforge envvars create USER_AGENT
+```
+
+`WEB_SESSION_SECRET` 至少使用 32 個隨機 bytes 產生。Secret 不得 commit、不得寫入 `.env`、不得輸出到 logs，也不得放入 job artifacts。環境變數變更後必須重啟 Web service。
+
+以不可變的 commit 或 tag 建置並啟動：
+
+```bash
+toolforge build start <repository-url> --ref <commit-or-tag>
+toolforge build show
+toolforge webservice buildservice start
+toolforge webservice buildservice status
+```
+
+首次啟動前，將版本庫內的 service template 複製到 tool account。更新時先建置指定 commit、確認 build 成功，再執行 `toolforge webservice buildservice restart`。
+
+### 部署驗證
+
+最低限度的自動 smoke check 為：
+
+```bash
+curl --fail --show-error https://<tool-name>.toolforge.org/healthz
+```
+
+回應成功後才能繼續互動檢查。依序驗證 OAuth login/logout、dry-run workflow、sandbox review，以及一次 sandbox publish，並確認 revision 與 `publish-audit.jsonl` 紀錄一致；同時驗證 invalid CSRF token 會被拒絕。部署後第一次驗證不得使用 Commons live target。
+
+### 監控與 audit
+
+使用下列指令持續查看 application output：
+
+```bash
+toolforge webservice buildservice logs -f
+```
+
+Operational logs 使用 JSON event。建議初始告警門檻如下：
+
+| Event | 初始處理門檻 |
+| --- | --- |
+| `oauth.login.failure` | 15 分鐘內出現 5 次時調查。 |
+| `oauth.refresh.failure` | 重複發生時檢查 consumer 設定與 token validity。 |
+| `publish.failure` | 立即調查；live mode 重試前先檢查 Commons history。 |
+| `publish.audit.failure` | 暫停 live publish，直到 NFS 空間、mount 與權限恢復；必要時從 Commons revision 補回佐證。 |
+| `job.duration` | Workflow latency 超過平常 p95 的兩倍或 30 分鐘時調查。 |
+
+每次 publish attempt 都會 append audit record 到 `output/jobs/<job-id>/logs/publish-audit.jsonl`。紀錄必須包含 operator、OAuth consumer、mode、target title、revision ID、timestamp、workflow、result 與 event type，且不得包含 credential 或 token。Application logs 用於偵測事故；per-job audit file 是 publish accountability 的本機權威紀錄。
+
+### 事故處理、rollback 與 rotation
+
+- `/healthz` 失敗時，先檢查 service status 與 logs，再確認 `PORT`、Node.js start command 與目前 build。
+- OAuth callback 失敗時，比對註冊的 callback URL 與 `WIKIMEDIA_OAUTH_CALLBACK_URL`，再確認 consumer 與環境變數，但不得暴露 secret value。
+- Publish 失敗時，重試前先檢查 Commons page history，避免重複或衝突 edit。Audit write 失敗時，先停止 live publish，直到 persistent storage 修復。
+- Rollback 時以已知正常的舊 commit 或 tag 重新 build 並 restart。NFS-backed job data 會保留，但 Pod restart 會使所有 in-memory session 失效，維護者必須重新登入。
+
+Secret rotation 的順序是：產生替代值、透過互動式 `toolforge envvars create` 更新、restart service、重跑 health/OAuth/sandbox smoke checks，確認替代值正常後才撤銷舊 credential。
+
+Production 變更前，應以最新官方 [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web)、[Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service) 與[環境變數](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars)文件核對實際操作。

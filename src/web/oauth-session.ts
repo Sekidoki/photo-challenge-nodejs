@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
 import { config } from "../infra/config.js";
+import { recordOperationalEvent } from "../infra/operational-events.js";
 
 const sessionCookieName = "photo_challenge_session";
 const loginStateCookieName = "photo_challenge_oauth_state";
@@ -159,6 +160,13 @@ export async function getOAuthSession(
       session.refreshToken = token.refreshToken ?? session.refreshToken;
       session.accessTokenExpiresAt = Date.now() + token.expiresInSeconds * 1000;
     } catch {
+      recordOperationalEvent({
+        event: "oauth.refresh.failure",
+        outcome: "failure",
+        operator: session.userName,
+        oauthConsumer: config.oauth.clientId,
+        failureStage: "refresh"
+      });
       sessions.delete(sessionId);
       response?.clearCookie(sessionCookieName, cookieOptions());
       return null;

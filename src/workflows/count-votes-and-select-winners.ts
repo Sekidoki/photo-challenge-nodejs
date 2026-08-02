@@ -38,7 +38,8 @@ export async function runVoteCountingWorkflow({
   paths,
   jobId,
   request,
-  challengeSlug
+  challengeSlug,
+  publishAuditContext
 }: AuthenticatedWorkflowContext): Promise<WorkflowSummary> {
   const sourcePages = await readSourcePages(bot, paths, jobId, getSourcePageSpecs(request));
   const artifacts = await buildVoteCountingArtifacts(bot, request, sourcePages, jobId);
@@ -48,9 +49,9 @@ export async function runVoteCountingWorkflow({
   await writeFile(path.join(paths.generatedDir, `${challengeSlug}_winners.txt`), artifacts.winnersText, "utf8");
 
   updateProgress(jobId, { percent: 88, step: "Publishing pages", message: `Publish mode: ${request.publishMode}` });
-  await publishPage(bot, jobId, request.credentials.name, request.challenge, "voting", artifacts.revisedText, "Photo Challenge bot: revise voting page after validation", request.publishMode);
-  await publishPage(bot, jobId, request.credentials.name, request.challenge, "result", artifacts.resultText, "Photo Challenge bot: create result page", request.publishMode);
-  await publishPage(bot, jobId, request.credentials.name, request.challenge, "winners", artifacts.winnersText, "Photo Challenge bot: create winners page", request.publishMode);
+  await publishPage(bot, jobId, request.credentials.name, request.challenge, "voting", artifacts.revisedText, "Photo Challenge bot: revise voting page after validation", request.publishMode, publishAuditContext);
+  await publishPage(bot, jobId, request.credentials.name, request.challenge, "result", artifacts.resultText, "Photo Challenge bot: create result page", request.publishMode, publishAuditContext);
+  await publishPage(bot, jobId, request.credentials.name, request.challenge, "winners", artifacts.winnersText, "Photo Challenge bot: create winners page", request.publishMode, publishAuditContext);
 
   return {
     sourceCount: sourcePages.length,

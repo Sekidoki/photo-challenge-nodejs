@@ -8,6 +8,8 @@ import {
   validateCsrfToken
 } from "../oauth-session.js";
 import { createTranslator, getRequestLocale } from "../i18n.js";
+import { recordOperationalEvent } from "../../infra/operational-events.js";
+import { config } from "../../infra/config.js";
 
 export function startOAuthLogin(request: Request, response: Response): void {
   const configurationError = getOAuthConfigurationMessage();
@@ -26,6 +28,12 @@ export async function finishOAuthLogin(request: Request, response: Response): Pr
     const returnTo = await completeOAuthLogin(request, response);
     response.redirect(returnTo);
   } catch (error) {
+    recordOperationalEvent({
+      event: "oauth.login.failure",
+      outcome: "failure",
+      oauthConsumer: config.oauth.clientId || null,
+      failureStage: "callback"
+    });
     const message = error instanceof Error ? error.message : t("auth.failed");
     response.redirect(`/?authError=${encodeURIComponent(message)}`);
   }

@@ -8,7 +8,8 @@ export async function runArchivePagesWorkflow({
   bot,
   paths,
   jobId,
-  request
+  request,
+  publishAuditContext
 }: AuthenticatedWorkflowContext): Promise<WorkflowSummary> {
   const archivePairs = [
     {
@@ -35,7 +36,7 @@ export async function runArchivePagesWorkflow({
     jobStore.appendMessage(jobId, `Read ${pair.source} (${page.content.length} chars)`);
 
     if (request.publishMode === "live") {
-      await publishRawPage(bot, jobId, pair.source, pair.liveTarget, page.content, `Photo Challenge bot: archive ${pair.source}`);
+      await publishRawPage(bot, jobId, pair.source, pair.liveTarget, page.content, `Photo Challenge bot: archive ${pair.source}`, publishAuditContext);
     }
   }
 

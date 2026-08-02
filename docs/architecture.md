@@ -130,6 +130,8 @@ OAuth and BotPassword deliberately coexist at different entry points:
 
 The in-memory OAuth session store assumes one Toolforge Web replica. Moving to multiple replicas requires a shared encrypted session store before increasing the replica count.
 
+OAuth callback, CSRF rejection, and access-token refresh are covered at the HTTP boundary by `oauth-http.test.ts`. OAuth login and refresh failures emit typed operational events without raw errors, tokens, complete user agents, or IP addresses.
+
 ## 7. Artifacts, Job History, and Publish History
 
 Each job uses a fixed output directory:
@@ -139,15 +141,19 @@ output/jobs/<job-id>/
   input/
   generated/
   logs/job.log
+  logs/publish-audit.jsonl
 ```
 
 - `input/`: source pages read from Commons.
 - `generated/`: generated wikitext, JSON plans, summaries, and publish history.
 - `logs/job.log`: minimal metadata used to rebuild job history.
+- `logs/publish-audit.jsonl`: append-only structured records for publish success, failure, and no-op skips. Records include operator, OAuth consumer, mode, target, revision ID, timestamp, workflow, and result, but never credentials or OAuth tokens.
 
 `src/infra/job-history.ts` rebuilds past jobs from `logs/job.log`. Changes to log fields must consider compatibility with old jobs.
 
-Maintenance publish history is stored in `generated/maintenance_publish_history.json` and is written by `publish-service.ts` through `recordMaintenancePublish`.
+Maintenance publish history is stored in `generated/maintenance_publish_history.json` and is written by `publish-service.ts` through `recordMaintenancePublish`. New records also include the operator and OAuth consumer. `operational-events.ts` emits structured login failures, refresh failures, publish failures, audit-write failures, and job duration events for Toolforge log monitoring.
+
+On Toolforge, `config.ts` uses `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs` so job artifacts and audit records survive Pod restarts. `PHOTO_CHALLENGE_DATA_ROOT` can explicitly override the data root. Deployment must mount persistent Toolforge storage and remain at one replica; operational requirements are defined in section 11.
 
 ## 8. Action and Naming Policy
 
@@ -183,7 +189,86 @@ Primary test boundaries:
 - `workflow-integration.test.ts`: offline generated artifacts remain stable.
 - `publish-review.test.ts` and `maintenance-review.test.ts`: Web review service view models.
 - `publish-service.test.ts`: publish save, skip, and history behavior.
+- `oauth-http.test.ts`: OAuth callback, CSRF rejection, and session refresh through real Express HTTP routes.
 - `maintenance-publish.test.ts`: maintenance plan guards and edit application.
 - Parser, renderer, and scoring tests: Commons wikitext compatibility.
 
 When changing parsers or renderers, add fixtures or snapshot-like assertions. Commons wikitext output is the most important compatibility surface.
+
+## 11. Toolforge Deployment and Operations
+
+Toolforge deployment is part of the system architecture because authentication sessions, persistent job data, and publish auditability depend on the service topology. The checked-in `toolforge/service.template` is the baseline configuration:
+
+- `type: buildservice` with `mount: all`, so the application is built by Toolforge and can use persistent NFS storage.
+- `replicas: 1`, because OAuth sessions and tokens are process-local. Do not increase the replica count until a shared encrypted session store is implemented.
+- `health-check-path: /healthz`, with a baseline allocation of `500m` CPU and `512Mi` memory.
+- Job data defaults to `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`. Use `PHOTO_CHALLENGE_DATA_ROOT` only when an explicit alternative persistent root is required.
+
+### Deployment configuration and secrets
+
+Before deployment, run `npm ci`, `npm run check`, `npm run check:test`, `npm test`, and `npm run build`. Register the exact OAuth callback `https://<tool-name>.toolforge.org/auth/callback` with the Wikimedia OAuth consumer.
+
+Create production settings interactively so secret values do not appear in shell history or process arguments:
+
+```bash
+toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
+toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
+toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL
+toolforge envvars create WEB_SESSION_SECRET
+toolforge envvars create WIKIMEDIA_OAUTH_ALLOWED_USERS
+toolforge envvars create USER_AGENT
+```
+
+`WEB_SESSION_SECRET` must be generated from at least 32 random bytes. Secrets must not be committed, stored in `.env`, printed to logs, or copied into job artifacts. Restart the Web service after changing environment variables.
+
+Build and start from an immutable commit or tag:
+
+```bash
+toolforge build start <repository-url> --ref <commit-or-tag>
+toolforge build show
+toolforge webservice buildservice start
+toolforge webservice buildservice status
+```
+
+Copy the checked-in service template to the tool account before the first start. For an update, build the selected commit, confirm the build succeeds, and then run `toolforge webservice buildservice restart`.
+
+### Deployment verification
+
+The minimum automated smoke check is:
+
+```bash
+curl --fail --show-error https://<tool-name>.toolforge.org/healthz
+```
+
+The response must be successful before interactive checks continue. Verify OAuth login and logout, a dry-run workflow, a sandbox review, and one sandbox publish whose revision and `publish-audit.jsonl` record agree. Also verify that a request with an invalid CSRF token is rejected. Never use a live Commons target for initial post-deployment verification.
+
+### Monitoring and audit
+
+Stream application output with:
+
+```bash
+toolforge webservice buildservice logs -f
+```
+
+Operational logs are JSON events. Suggested initial alert thresholds are:
+
+| Event | Initial response threshold |
+| --- | --- |
+| `oauth.login.failure` | Investigate after 5 events in 15 minutes. |
+| `oauth.refresh.failure` | Check consumer configuration and token validity when repeated. |
+| `publish.failure` | Investigate immediately; inspect Commons history before retrying live mode. |
+| `publish.audit.failure` | Stop live publishing until NFS space, mount, and permissions are healthy; backfill evidence from the Commons revision if necessary. |
+| `job.duration` | Investigate workflow latency above twice its normal p95 or 30 minutes. |
+
+Every publish attempt writes an append-only audit record to `output/jobs/<job-id>/logs/publish-audit.jsonl`. The record must identify the operator, OAuth consumer, mode, target title, revision ID, timestamp, workflow, result, and event type without including a credential or token. Application logs help detect incidents; the per-job audit file is the authoritative local record for publish accountability.
+
+### Incident response, rollback, and rotation
+
+- If `/healthz` fails, check service status and logs first, then confirm `PORT`, the Node.js start command, and the current build.
+- If OAuth callback fails, compare the registered callback URL with `WIKIMEDIA_OAUTH_CALLBACK_URL`, then verify the consumer and environment variables without exposing their values.
+- If publishing fails, inspect the Commons page history before retrying to avoid duplicate or conflicting edits. If audit writing fails, pause live publishing until persistent storage is repaired.
+- Roll back by building a previously known-good commit or tag and restarting the service. NFS-backed job data remains available, but a Pod restart invalidates all in-memory sessions and requires maintainers to sign in again.
+
+Rotate a secret by generating a replacement, updating it through the interactive `toolforge envvars create` prompt, restarting the service, and repeating the health/OAuth/sandbox smoke checks. Revoke the old credential only after the replacement is verified.
+
+Operational behavior should be checked against the current official [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web), [Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service), and [environment variables](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars) documentation before production changes.

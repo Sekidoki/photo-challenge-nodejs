@@ -4,6 +4,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const projectRoot = process.cwd();
+const persistentDataRoot = resolvePersistentDataRoot(process.env, projectRoot);
+
+export function resolvePersistentDataRoot(
+  environment: { PHOTO_CHALLENGE_DATA_ROOT?: string; TOOL_DATA_DIR?: string },
+  fallbackRoot: string
+): string {
+  const explicitRoot = environment.PHOTO_CHALLENGE_DATA_ROOT?.trim();
+  if (explicitRoot) return explicitRoot;
+  const toolDataDir = environment.TOOL_DATA_DIR?.trim();
+  return toolDataDir ? path.join(toolDataDir, "photo-challenge-nodejs") : fallbackRoot;
+}
 
 function parseCsv(value: string | undefined): string[] {
   return (value ?? "")
@@ -20,7 +31,7 @@ const oauthSessionSecret = process.env.WEB_SESSION_SECRET?.trim() ?? "";
 export const config = {
   port: Number(process.env.PORT ?? 3000),
   projectRoot,
-  outputRoot: path.join(projectRoot, "output", "jobs"),
+  outputRoot: path.join(persistentDataRoot, "output", "jobs"),
   commonsApiUrl: process.env.COMMONS_API_URL ?? "https://commons.wikimedia.org/w/api.php",
   userAgent:
     process.env.USER_AGENT ??

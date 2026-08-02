@@ -60,6 +60,10 @@ test("readExistingPageContent returns null for missing pages", async () => {
 });
 
 test("publishStandardPages saves each planned page and reports messages", async () => {
+  const jobId = "publish-service-standard";
+  const paths = getJobOutputPaths(jobId);
+  await rm(paths.jobRoot, { recursive: true, force: true });
+  await mkdir(paths.logsDir, { recursive: true });
   const { bot, saves } = makeFakeBot(new Map());
   const messages: string[] = [];
 
@@ -73,12 +77,25 @@ test("publishStandardPages saves each planned page and reports messages", async 
         editSummary: "Create result"
       }
     ],
-    (message) => messages.push(message)
+    (message) => messages.push(message),
+    {
+      jobId,
+      workflow: "count-votes-and-select-winners",
+      operator: "Example Maintainer",
+      oauthConsumer: "test-oauth-consumer",
+      mode: "sandbox"
+    }
   );
 
   assert.equal(count, 1);
   assert.deepEqual(saves.map((save) => save.title), ["User:Example/Sandbox/Result"]);
   assert.match(messages.join("\n"), /Published Result Page to User:Example\/Sandbox\/Result/);
+  const audit = JSON.parse((await readFile(path.join(paths.logsDir, "publish-audit.jsonl"), "utf8")).trim()) as Record<string, unknown>;
+  assert.equal(audit.targetTitle, "User:Example/Sandbox/Result");
+  assert.equal(audit.revisionId, 1);
+  assert.equal(audit.operator, "Example Maintainer");
+  assert.equal(audit.oauthConsumer, "test-oauth-consumer");
+  await rm(paths.jobRoot, { recursive: true, force: true });
 });
 
 test("publishMaintenanceEditPlans skips unchanged live entries and records published history", async () => {
@@ -100,7 +117,20 @@ test("publishMaintenanceEditPlans skips unchanged live entries and records publi
   ]));
   const messages: string[] = [];
 
-  const counts = await publishMaintenanceEditPlans(bot, jobId, entries, "live", (message) => messages.push(message));
+  const counts = await publishMaintenanceEditPlans(
+    bot,
+    jobId,
+    entries,
+    "live",
+    (message) => messages.push(message),
+    {
+      jobId,
+      workflow: "post-results-maintenance",
+      operator: "Example Maintainer",
+      oauthConsumer: "test-oauth-consumer",
+      mode: "live"
+    }
+  );
 
   assert.equal(counts.skippedTotal, 1);
   assert.equal(counts.publishedTotal, 1);
@@ -108,8 +138,25 @@ test("publishMaintenanceEditPlans skips unchanged live entries and records publi
   assert.deepEqual(saves.map((save) => save.title), ["File:Orange One.jpg"]);
   assert.match(messages.join("\n"), /Skipped Winner Notification/);
 
-  const history = JSON.parse(await readFile(path.join(paths.generatedDir, "maintenance_publish_history.json"), "utf8")) as Array<{ targetTitle: string }>;
+  const history = JSON.parse(await readFile(path.join(paths.generatedDir, "maintenance_publish_history.json"), "utf8")) as Array<{
+    targetTitle: string;
+    operator: string;
+    oauthConsumer: string | null;
+  }>;
   assert.deepEqual(history.map((record) => record.targetTitle), ["File:Orange One.jpg"]);
+  assert.equal(history[0]?.operator, "Example Maintainer");
+  assert.equal(history[0]?.oauthConsumer, "test-oauth-consumer");
+
+  const auditContent = await readFile(path.join(paths.logsDir, "publish-audit.jsonl"), "utf8");
+  const auditRecords = auditContent.trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+  assert.deepEqual(auditRecords.map((record) => record.event), ["publish.skipped", "publish.succeeded"]);
+  assert.equal(auditRecords[1]?.operator, "Example Maintainer");
+  assert.equal(auditRecords[1]?.oauthConsumer, "test-oauth-consumer");
+  assert.equal(auditRecords[1]?.mode, "live");
+  assert.equal(auditRecords[1]?.targetTitle, "File:Orange One.jpg");
+  assert.equal(auditRecords[1]?.revisionId, 1);
+  assert.equal(typeof auditRecords[1]?.occurredAt, "string");
+  assert.equal(auditContent.includes("token"), false);
 
   await rm(paths.jobRoot, { recursive: true, force: true });
 });

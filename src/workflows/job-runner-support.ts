@@ -6,6 +6,9 @@ import { resolveSubmissionWindow } from "../renderers/voting-page.js";
 import { jobStore } from "../infra/job-store.js";
 import type { JobOutputPaths } from "../infra/output-paths.js";
 import type { CommonsBot, ReadPageResult } from "../services/commons-bot.js";
+import type { PublishAuditContext } from "../infra/publish-audit.js";
+import { recordPublishAudit } from "../infra/publish-audit.js";
+import { recordOperationalEvent } from "../infra/operational-events.js";
 
 export type ProgressStep = {
   percent: number;
@@ -40,6 +43,7 @@ export type AuthenticatedWorkflowContext = {
   jobId: string;
   request: JobRequest;
   challengeSlug: string;
+  publishAuditContext: PublishAuditContext;
 };
 
 type PublishPageType = "voting" | "result" | "winners";
@@ -237,13 +241,40 @@ export async function publishPage(
   pageType: PublishPageType,
   text: string,
   editSummary: string,
-  publishMode: PublishMode
+  publishMode: PublishMode,
+  auditContext: PublishAuditContext
 ): Promise<void> {
   if (publishMode === "dry-run") return;
 
   const target = resolvePublishTarget(loginName, challenge, pageType, publishMode);
   jobStore.appendMessage(jobId, `Publishing ${pageType} page to ${target}`);
-  const saveResult = await bot.savePage(target, text, editSummary);
+  let saveResult;
+  try {
+    saveResult = await bot.savePage(target, text, editSummary);
+  } catch (error) {
+    await recordPublishAudit({
+      ...auditContext,
+      event: "publish.failed",
+      targetTitle: target,
+      revisionId: null,
+      result: "failure"
+    });
+    recordOperationalEvent({
+      event: "publish.failure",
+      outcome: "failure",
+      ...auditContext,
+      targetTitle: target,
+      failureStage: "save"
+    });
+    throw error;
+  }
+  await recordPublishAudit({
+    ...auditContext,
+    event: "publish.succeeded",
+    targetTitle: target,
+    revisionId: saveResult.newRevisionId,
+    result: saveResult.result
+  });
   const revNote = saveResult.newRevisionId ? ` (revision ${saveResult.newRevisionId})` : "";
   jobStore.appendMessage(jobId, `Published ${pageType} page \u2192 ${saveResult.result}${revNote}`);
 }
@@ -254,10 +285,37 @@ export async function publishRawPage(
   label: string,
   targetTitle: string,
   text: string,
-  editSummary: string
+  editSummary: string,
+  auditContext: PublishAuditContext
 ): Promise<void> {
   jobStore.appendMessage(jobId, `Publishing ${label} to ${targetTitle}`);
-  const saveResult = await bot.savePage(targetTitle, text, editSummary);
+  let saveResult;
+  try {
+    saveResult = await bot.savePage(targetTitle, text, editSummary);
+  } catch (error) {
+    await recordPublishAudit({
+      ...auditContext,
+      event: "publish.failed",
+      targetTitle,
+      revisionId: null,
+      result: "failure"
+    });
+    recordOperationalEvent({
+      event: "publish.failure",
+      outcome: "failure",
+      ...auditContext,
+      targetTitle,
+      failureStage: "save"
+    });
+    throw error;
+  }
+  await recordPublishAudit({
+    ...auditContext,
+    event: "publish.succeeded",
+    targetTitle,
+    revisionId: saveResult.newRevisionId,
+    result: saveResult.result
+  });
   const revNote = saveResult.newRevisionId ? ` (revision ${saveResult.newRevisionId})` : "";
   jobStore.appendMessage(jobId, `Published ${label} \u2192 ${saveResult.result}${revNote}`);
 }

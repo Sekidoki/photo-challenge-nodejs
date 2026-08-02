@@ -112,7 +112,7 @@ npm test
 - Toolforge 比較、前端方案與 OAuth 上線步驟：[docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 建議下一步：
-- 補 deployment / operations 文件，支援非本機單人使用情境
+- 增加 Toolforge replica 前，先導入共享且加密的 session store
 - 擴充更舊 Commons 頁面格式與特殊簽名 fixtures
 - 補 create-voting、count-votes-and-select-winners、maintenance publish 的 Web flow integration tests
 - 視需要加入 changed line 內更細的字詞級 diff

@@ -1,0 +1,7 @@
+# Copy this file to the Toolforge tool account's service.template.
+type: buildservice
+mount: all
+replicas: 1
+health-check-path: /healthz
+cpu: 500m
+mem: 512Mi

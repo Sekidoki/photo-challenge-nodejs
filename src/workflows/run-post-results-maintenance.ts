@@ -8,6 +8,7 @@ import type { JobOutputPaths } from "../infra/output-paths.js";
 import type { CommonsBot, ReadPageResult } from "../services/commons-bot.js";
 import { buildMaintenancePublishEntries, type MaintenancePublishMode } from "./maintenance-publish.js";
 import { publishMaintenanceEditPlans } from "./publish-service.js";
+import type { PublishAuditContext } from "../infra/publish-audit.js";
 import {
   buildChallengeAnnouncement,
   buildFileAssessmentPlans,
@@ -36,6 +37,7 @@ type PublishRuntime = {
   bot: CommonsBot;
   jobId: string;
   loginName: string;
+  publishAuditContext?: PublishAuditContext;
 };
 
 export async function runPostResultsMaintenance(
@@ -365,5 +367,11 @@ async function publishMaintenancePlanEntries(
   reportMessage: MessageReporter
 ): Promise<{ notifications: number; fileAssessments: number; announcements: number; previousPages: number }> {
   const entries = buildMaintenancePublishEntries(maintenancePlanContent, runtime.loginName, mode);
-  return publishMaintenanceEditPlans(runtime.bot, runtime.jobId, entries, mode, reportMessage);
+  return publishMaintenanceEditPlans(runtime.bot, runtime.jobId, entries, mode, reportMessage, runtime.publishAuditContext ?? {
+    jobId: runtime.jobId,
+    workflow: "post-results-maintenance",
+    operator: runtime.loginName,
+    oauthConsumer: null,
+    mode
+  });
 }

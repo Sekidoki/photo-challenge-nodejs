@@ -64,6 +64,7 @@
               <strong>{{label}}</strong>
               <span><code>{{mode}}</code> {{t "maintenanceReview.to"}} <code>{{targetTitle}}</code></span>
               <span>{{publishedAt}}{{#if revisionId}} · {{t "maintenanceReview.revision" id=revisionId}}{{/if}}</span>
+              {{#if operator}}<span>{{t "common.account"}}: <code>{{operator}}</code>{{#if oauthConsumer}} · {{t "maintenanceReview.oauthConsumer"}}: <code>{{oauthConsumer}}</code>{{/if}}</span>{{/if}}
             </span>
           </li>
         {{/each}}

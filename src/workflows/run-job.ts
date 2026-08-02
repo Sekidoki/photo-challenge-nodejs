@@ -4,7 +4,7 @@ import { VOTE_COUNTING_ACTION } from "../core/job-actions.js";
 import { config } from "../infra/config.js";
 import { jobStore } from "../infra/job-store.js";
 import { ensureJobOutputPaths, getJobOutputPaths } from "../infra/output-paths.js";
-import { createCommonsBot, toUserFacingCommonsErrorMessage, type CommonsBot } from "../services/commons-bot.js";
+import { createCommonsBot, isCommonsLoginError, toUserFacingCommonsErrorMessage, type CommonsBot } from "../services/commons-bot.js";
 import { runArchivePagesWorkflow } from "./archive-pages.js";
 import { runBuildVotingIndexWorkflow } from "./build-voting-index.js";
 import { runCreateVotingWorkflow } from "./create-voting.js";
@@ -19,10 +19,13 @@ import {
 } from "./job-runner-support.js";
 import { getSandboxRootForName, resolvePublishTarget } from "./job-runner-support.js";
 import { runPostResultsMaintenance } from "./run-post-results-maintenance.js";
+import { recordOperationalEvent } from "../infra/operational-events.js";
+import { buildJobPublishAuditContext } from "../infra/publish-audit.js";
 
 export { getSandboxRootForName, resolvePublishTarget };
 
 export async function runJob(jobId: string, request: JobRequest): Promise<void> {
+  const startedAtMs = Date.now();
   let paths: Awaited<ReturnType<typeof ensureJobOutputPaths>> | null = null;
 
   try {
@@ -56,7 +59,8 @@ export async function runJob(jobId: string, request: JobRequest): Promise<void> 
           ? {
               bot,
               jobId,
-              loginName: request.credentials.name
+              loginName: request.credentials.name,
+              publishAuditContext: buildJobPublishAuditContext(jobId, request)
             }
           : null
       );
@@ -84,17 +88,41 @@ export async function runJob(jobId: string, request: JobRequest): Promise<void> 
       paths,
       jobId,
       request,
-      challengeSlug
+      challengeSlug,
+      publishAuditContext: buildJobPublishAuditContext(jobId, request)
     };
     const summary = await runAuthenticatedWorkflow(context);
     await finalizeAndComplete(jobId, request, paths.logsDir, currentUser, timestamp, summary);
   } catch (error) {
     const message = toUserFacingCommonsErrorMessage(error);
+    if (request.publishMode !== "dry-run" && isCommonsLoginError(error)) {
+      recordOperationalEvent({
+        event: "publish.failure",
+        outcome: "failure",
+        jobId,
+        workflow: request.action,
+        mode: request.publishMode,
+        operator: request.credentials.name,
+        oauthConsumer: request.credentials.oauthAccessToken ? config.oauth.clientId : null,
+        failureStage: "authentication"
+      });
+    }
     jobStore.appendMessage(jobId, `Job failed: ${message}`);
     if (paths) {
       await persistFailedJob(paths.logsDir, jobId, request, message);
     }
     jobStore.markFailed(jobId, message);
+  } finally {
+    recordOperationalEvent({
+      event: "job.duration",
+      outcome: jobStore.get(jobId)?.status === "completed" ? "success" : "failure",
+      jobId,
+      workflow: request.action,
+      mode: request.publishMode,
+      operator: request.credentials.name,
+      oauthConsumer: request.credentials.oauthAccessToken ? config.oauth.clientId : null,
+      durationMs: Date.now() - startedAtMs
+    });
   }
 }
 

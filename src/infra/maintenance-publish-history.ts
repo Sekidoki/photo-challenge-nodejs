@@ -10,6 +10,8 @@ export type MaintenancePublishRecord = {
   targetTitle: string;
   liveTargetTitle: string;
   editSummary: string;
+  operator: string;
+  oauthConsumer: string | null;
   publishedAt: string;
   revisionId: number | null;
   result: string;

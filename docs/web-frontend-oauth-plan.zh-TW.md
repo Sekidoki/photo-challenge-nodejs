@@ -90,12 +90,14 @@ WIKIMEDIA_OAUTH_ALLOWED_USERS=MaintainerOne,MaintainerTwo
 - Web review service 接受 translator，讓 diff 狀態、警告與維護摘要不再散落成固定英文；缺少翻譯時回退英文。
 - 新增 message catalog 的語系優先序、插值、fallback 與 URL 保留測試。
 
-### 後續：營運可靠性
+### 已完成：營運可靠性
 
-- 新增 Web OAuth callback、CSRF、session refresh 的 HTTP integration tests。
-- 新增 structured audit fields：操作者、OAuth consumer、模式、目標、revision ID、時間；仍不得記錄 token。
-- `/healthz` 已完成；接著補部署 runbook，並監控登入失敗、publish failure、job duration，但不記錄秘密或完整 user agent/IP。
-- 確認需要多 replica 後，才導入共享 session storage。
+- 新增 Web OAuth callback、CSRF 拒絕、session refresh 的 Express HTTP integration tests。
+- 所有 Web／CLI publish 路徑寫入 `logs/publish-audit.jsonl`；欄位包含操作者、OAuth consumer、模式、目標、revision ID、時間、workflow 與結果，且不記錄 token。
+- Maintenance publish history 同步保存 operator 與 OAuth consumer，舊紀錄仍可讀取。
+- `/healthz` 搭配 Toolforge HTTP health check；typed operational events 可監控登入失敗、refresh failure、publish failure、audit write failure 與 job duration，不記錄秘密、完整 user agent 或 IP。
+- 已將 Toolforge deployment、smoke test、監控、rollback 與 secret rotation 納入 `architecture.md` 的部署與營運架構，並在 Toolforge 自動使用 `TOOL_DATA_DIR` 保存 output 與 audit。
+- OAuth session 仍為 process memory，部署維持單一 replica；確認需要多 replica 後，才導入共享且加密的 session storage
 
 ## 6. 驗收標準
 

@@ -34,7 +34,8 @@ export async function runCreateVotingWorkflow({
   paths,
   jobId,
   request,
-  challengeSlug
+  challengeSlug,
+  publishAuditContext
 }: AuthenticatedWorkflowContext): Promise<WorkflowSummary> {
   const sourcePages = await readSourcePages(
     bot,
@@ -67,7 +68,8 @@ export async function runCreateVotingWorkflow({
     "voting",
     renderedVotingPage.text,
     "Photo Challenge bot: create voting page",
-    request.publishMode
+    request.publishMode,
+    publishAuditContext
   );
 
   return {

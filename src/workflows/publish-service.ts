@@ -1,4 +1,6 @@
 import { recordMaintenancePublish } from "../infra/maintenance-publish-history.js";
+import { recordOperationalEvent } from "../infra/operational-events.js";
+import { recordPublishAudit, type PublishAuditContext } from "../infra/publish-audit.js";
 import type { CommonsBot, SavePageResult } from "../services/commons-bot.js";
 import { applyMaintenancePublishEntry, type MaintenancePublishEntry, type MaintenancePublishMode } from "./maintenance-publish.js";
 
@@ -35,10 +37,28 @@ export async function readExistingPageContent(bot: CommonsBot, title: string): P
 export async function publishStandardPages(
   bot: CommonsBot,
   entries: StandardPublishPlan[],
-  reportMessage: MessageReporter
+  reportMessage: MessageReporter,
+  auditContext?: PublishAuditContext
 ): Promise<number> {
   for (const entry of entries) {
-    await bot.savePage(entry.targetTitle, entry.content, entry.editSummary);
+    let saveResult: SavePageResult;
+    try {
+      saveResult = await bot.savePage(entry.targetTitle, entry.content, entry.editSummary);
+    } catch (error) {
+      if (auditContext) {
+        await recordFailedPublish(auditContext, entry.targetTitle);
+      }
+      throw error;
+    }
+    if (auditContext) {
+      await recordPublishAudit({
+        ...auditContext,
+        event: "publish.succeeded",
+        targetTitle: entry.targetTitle,
+        revisionId: saveResult.newRevisionId,
+        result: saveResult.result
+      });
+    }
     reportMessage(`Published ${entry.label} to ${entry.targetTitle}`);
   }
 
@@ -50,7 +70,8 @@ export async function publishMaintenanceEditPlans(
   jobId: string,
   entries: MaintenancePublishEntry[],
   mode: MaintenancePublishMode,
-  reportMessage: MessageReporter
+  reportMessage: MessageReporter,
+  auditContext?: PublishAuditContext
 ): Promise<MaintenancePublishCounts> {
   const counts: MaintenancePublishCounts = {
     notifications: 0,
@@ -62,17 +83,51 @@ export async function publishMaintenanceEditPlans(
   };
 
   for (const entry of entries) {
-    const currentContent = await readExistingPageContent(bot, entry.liveTargetTitle);
+    let currentContent: string | null;
+    try {
+      currentContent = await readExistingPageContent(bot, entry.liveTargetTitle);
+    } catch (error) {
+      if (auditContext) {
+        await recordFailedPublish(auditContext, entry.targetTitle);
+      }
+      throw error;
+    }
     const nextContent = applyMaintenancePublishEntry(currentContent, entry);
 
     if (mode === "live" && currentContent !== null && nextContent === currentContent) {
       counts.skippedTotal += 1;
+      if (auditContext) {
+        await recordPublishAudit({
+          ...auditContext,
+          event: "publish.skipped",
+          targetTitle: entry.targetTitle,
+          revisionId: null,
+          result: "unchanged"
+        });
+      }
       reportMessage(`Skipped ${entry.label} for ${entry.liveTargetTitle} because the live page already matches the generated content.`);
       continue;
     }
 
-    const saveResult = await bot.savePage(entry.targetTitle, nextContent, entry.editSummary);
-    await recordPublishedMaintenanceEntry(jobId, entry, mode, saveResult);
+    let saveResult: SavePageResult;
+    try {
+      saveResult = await bot.savePage(entry.targetTitle, nextContent, entry.editSummary);
+    } catch (error) {
+      if (auditContext) {
+        await recordFailedPublish(auditContext, entry.targetTitle);
+      }
+      throw error;
+    }
+    if (auditContext) {
+      await recordPublishAudit({
+        ...auditContext,
+        event: "publish.succeeded",
+        targetTitle: entry.targetTitle,
+        revisionId: saveResult.newRevisionId,
+        result: saveResult.result
+      });
+    }
+    await recordPublishedMaintenanceEntry(jobId, entry, mode, saveResult, auditContext);
     incrementMaintenanceCount(counts, entry);
 
     const revNote = saveResult.newRevisionId ? ` (revision ${saveResult.newRevisionId})` : "";
@@ -86,7 +141,8 @@ async function recordPublishedMaintenanceEntry(
   jobId: string,
   entry: MaintenancePublishEntry,
   mode: MaintenancePublishMode,
-  saveResult: SavePageResult
+  saveResult: SavePageResult,
+  auditContext?: PublishAuditContext
 ): Promise<void> {
   await recordMaintenancePublish(jobId, {
     id: entry.id,
@@ -96,9 +152,28 @@ async function recordPublishedMaintenanceEntry(
     targetTitle: entry.targetTitle,
     liveTargetTitle: entry.liveTargetTitle,
     editSummary: entry.editSummary,
+    operator: auditContext?.operator ?? "unknown",
+    oauthConsumer: auditContext?.oauthConsumer ?? null,
     publishedAt: new Date().toISOString(),
     revisionId: saveResult.newRevisionId,
     result: saveResult.result
+  });
+}
+
+async function recordFailedPublish(auditContext: PublishAuditContext, targetTitle: string): Promise<void> {
+  await recordPublishAudit({
+    ...auditContext,
+    event: "publish.failed",
+    targetTitle,
+    revisionId: null,
+    result: "failure"
+  });
+  recordOperationalEvent({
+    event: "publish.failure",
+    outcome: "failure",
+    ...auditContext,
+    targetTitle,
+    failureStage: "save"
   });
 }
 
