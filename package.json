@@ -5,8 +5,8 @@
   "description": "Node.js rewrite scaffold for Wikimedia Commons Photo Challenge tooling",
   "main": "dist/server.js",
   "engines": {
-    "node": ">=26.5.0 <27",
-    "npm": ">=11"
+    "node": ">=26.5.1 <27",
+    "npm": ">=12 <13"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -31,9 +31,13 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
-    "@types/luxon": "^3.7.2",
-    "@types/node": "^26.1.1",
-    "tsx": "^4.23.0",
+    "@types/luxon": "^3.7.3",
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.3",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "keytar@7.9.0": true
   }
 }
