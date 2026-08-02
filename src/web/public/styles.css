@@ -354,8 +354,20 @@ button:disabled {
 }
 
 .settings-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   margin-top: var(--spacing-100);
+}
+
+.settings-grid > label {
+  min-width: var(--size-0);
+  grid-template-rows: auto var(--min-size-interactive-touch) auto;
+  align-content: start;
+}
+
+.settings-grid input,
+.settings-grid select {
+  height: var(--min-size-interactive-touch);
 }
 
 .progress-shortcuts,
@@ -784,6 +796,7 @@ code,
 
 @media (max-width: 760px) {
   .task-card-grid,
+  .settings-grid,
   .publish-safety-grid {
     grid-template-columns: 1fr;
   }
