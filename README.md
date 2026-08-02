@@ -20,7 +20,7 @@ Setup details:
 - set `BOT_PASSWORD`
 - optional: set `USER_AGENT`, `PORT`, and `CREDENTIAL_SERVICE_NAME`
 
-For a shared Web deployment, register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`, then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. `WIKIMEDIA_OAUTH_ALLOWED_USERS` can optionally restrict access to a comma-separated maintainer list.
+For a shared Web deployment, register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`, then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. Maintainer access is fail-closed and managed from `/maintainers`; `Sekidoki` is the protected owner.
 
 ## Install
 

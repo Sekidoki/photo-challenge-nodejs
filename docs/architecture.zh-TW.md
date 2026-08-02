@@ -117,7 +117,9 @@ Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解�
 
 ### Web 登入
 
-部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、可選的維護者 allowlist，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
+部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
+
+維護者授權採 fail-closed，並持久保存於 `output/config/maintainers.json`。`Sekidoki` 是受保護的擁有者，不能透過 Web UI 變更。擁有者可以授予或撤銷名單管理員及一般維護者；名單管理員只能新增或移除一般維護者，不能變更擁有者或其他名單管理員。每個已驗證請求都會重新檢查角色，因此移除權限後，既有 session 會在下一次請求失效。緊急替換擁有者必須明確修改程式並重新部署。
 
 OAuth 與 BotPassword 刻意分別服務不同入口：
 
@@ -200,6 +202,7 @@ Toolforge deployment 屬於系統架構的一部分，因為 authentication sess
 - 使用 `replicas: 1`，因為 OAuth session 與 token 只存在單一 process。導入共享且加密的 session store 前不得增加 replica。
 - 使用 `health-check-path: /healthz`，基準資源為 `500m` CPU、`512Mi` memory。
 - Job data 預設放在 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`；只有需要明確替代的持久路徑時才設定 `PHOTO_CHALLENGE_DATA_ROOT`。
+- 維護者授權資料保存在 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/config/maintainers.json`，並透過已驗證的 Web UI 編輯。
 
 ### 部署設定與 secret
 
@@ -212,7 +215,6 @@ toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
 toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL
 toolforge envvars create WEB_SESSION_SECRET
-toolforge envvars create WIKIMEDIA_OAUTH_ALLOWED_USERS
 toolforge envvars create USER_AGENT
 ```
 

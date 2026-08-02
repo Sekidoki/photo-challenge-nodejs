@@ -6,6 +6,7 @@ import "./core/submission-entries.test.js";
 import "./core/validation-scoring.test.js";
 import "./infra/job-history.test.js";
 import "./infra/config.test.js";
+import "./infra/maintainer-registry.test.js";
 import "./parsers/submitting-parser.test.js";
 import "./parsers/voting-parser.test.js";
 import "./renderers/renderers.test.js";

@@ -120,7 +120,9 @@ The Web UI consumes pinned Wikimedia Codex design-token CSS from the installed p
 
 ### Web authentication
 
-The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `src/web/oauth-session.ts` owns authorization state, token exchange/refresh, signed cookies, optional maintainer allowlisting, and CSRF tokens. Access and refresh tokens stay in the server process and must never be written to job logs or artifacts. A Web job copies only the current short-lived access token into its in-memory `JobRequest`.
+The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `src/web/oauth-session.ts` owns authorization state, token exchange/refresh, signed cookies, maintainer authorization, and CSRF tokens. Access and refresh tokens stay in the server process and must never be written to job logs or artifacts. A Web job copies only the current short-lived access token into its in-memory `JobRequest`.
+
+Maintainer authorization is fail-closed and persisted at `output/config/maintainers.json`. `Sekidoki` is the protected owner and cannot be changed through the Web UI. The owner can grant or revoke list-manager and regular-maintainer roles. List managers can add or remove regular maintainers but cannot alter the owner or another list manager. Role membership is rechecked on every authenticated request, so removal invalidates an existing session on its next request. Emergency owner replacement requires an explicit code and deployment change.
 
 OAuth and BotPassword deliberately coexist at different entry points:
 
@@ -203,6 +205,7 @@ Toolforge deployment is part of the system architecture because authentication s
 - `replicas: 1`, because OAuth sessions and tokens are process-local. Do not increase the replica count until a shared encrypted session store is implemented.
 - `health-check-path: /healthz`, with a baseline allocation of `500m` CPU and `512Mi` memory.
 - Job data defaults to `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`. Use `PHOTO_CHALLENGE_DATA_ROOT` only when an explicit alternative persistent root is required.
+- Maintainer authorization data is stored at `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/config/maintainers.json` and is edited through the authenticated Web UI.
 
 ### Deployment configuration and secrets
 
@@ -215,7 +218,6 @@ toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
 toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL
 toolforge envvars create WEB_SESSION_SECRET
-toolforge envvars create WIKIMEDIA_OAUTH_ALLOWED_USERS
 toolforge envvars create USER_AGENT
 ```
 

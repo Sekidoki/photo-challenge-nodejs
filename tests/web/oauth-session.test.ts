@@ -36,7 +36,7 @@ function fakeRequest(query: Record<string, string>, cookies: CookieJar): Request
 }
 
 test("OAuth session completes Authorization Code + PKCE without exposing tokens to the cookie", async () => {
-  const previous = { ...config.oauth, allowedUsers: [...config.oauth.allowedUsers] };
+  const previous = { ...config.oauth };
   Object.assign(config.oauth, {
     clientId: "client-id",
     clientSecret: "client-secret",
@@ -45,7 +45,6 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
     authorizationUrl: "https://meta.example/oauth2/authorize",
     tokenUrl: "https://meta.example/oauth2/access_token",
     profileUrl: "https://meta.example/oauth2/resource/profile",
-    allowedUsers: [],
     configured: true
   });
 
@@ -76,7 +75,7 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
           expires_in: 3600
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
-      return new globalThis.Response(JSON.stringify({ username: "Example Maintainer" }), {
+      return new globalThis.Response(JSON.stringify({ username: "Sekidoki" }), {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
@@ -96,7 +95,8 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
     const sessionRequest = fakeRequest({}, cookies);
     const session = await getOAuthSession(sessionRequest, response, fetchImpl);
     assert(session);
-    assert.equal(session.userName, "Example Maintainer");
+    assert.equal(session.userName, "Sekidoki");
+    assert.equal(session.role, "owner");
     assert.equal(session.accessToken, "oauth-access-secret");
     assert.equal(validateCsrfToken(session, session.csrfToken), true);
     assert.equal(validateCsrfToken(session, "wrong-token"), false);

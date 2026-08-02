@@ -16,13 +16,6 @@ export function resolvePersistentDataRoot(
   return toolDataDir ? path.join(toolDataDir, "photo-challenge-nodejs") : fallbackRoot;
 }
 
-function parseCsv(value: string | undefined): string[] {
-  return (value ?? "")
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
 const oauthClientId = process.env.WIKIMEDIA_OAUTH_CLIENT_ID?.trim() ?? "";
 const oauthClientSecret = process.env.WIKIMEDIA_OAUTH_CLIENT_SECRET?.trim() ?? "";
 const oauthCallbackUrl = process.env.WIKIMEDIA_OAUTH_CALLBACK_URL?.trim() ?? "";
@@ -37,6 +30,10 @@ export const config = {
     process.env.USER_AGENT ??
     "photo-challenge-nodejs/0.1.0 (local development; contact via Wikimedia Commons user page)",
   credentialServiceName: process.env.CREDENTIAL_SERVICE_NAME ?? "photo-challenge-nodejs/commons",
+  accessControl: {
+    ownerUserName: "Sekidoki",
+    registryPath: path.join(persistentDataRoot, "output", "config", "maintainers.json")
+  },
   oauth: {
     clientId: oauthClientId,
     clientSecret: oauthClientSecret,
@@ -51,7 +48,6 @@ export const config = {
     profileUrl:
       process.env.WIKIMEDIA_OAUTH_PROFILE_URL
       ?? "https://meta.wikimedia.org/w/rest.php/oauth2/resource/profile",
-    allowedUsers: parseCsv(process.env.WIKIMEDIA_OAUTH_ALLOWED_USERS),
     configured: Boolean(
       oauthClientId
       && oauthClientSecret

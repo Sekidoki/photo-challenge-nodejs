@@ -794,6 +794,82 @@ code,
   margin: var(--spacing-150) var(--spacing-0);
 }
 
+.maintainer-overview {
+  margin-top: var(--spacing-150);
+  padding-top: var(--spacing-125);
+  border-top: var(--border-width-base) solid var(--border-color-muted);
+}
+
+.maintainer-list {
+  display: grid;
+  gap: var(--spacing-75);
+}
+
+.maintainer-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-100);
+  padding: var(--spacing-75) var(--spacing-100);
+  border: var(--border-width-base) solid var(--border-color-muted);
+  border-radius: var(--border-radius-base);
+  background: var(--background-color-base);
+}
+
+.maintainer-card-copy,
+.maintainer-actions,
+.inline-control-form,
+.maintainer-add-form,
+.maintainer-add-form label {
+  display: grid;
+  gap: var(--spacing-50);
+}
+
+.maintainer-actions,
+.inline-control-form {
+  grid-auto-flow: column;
+  align-items: end;
+}
+
+.maintainer-actions {
+  gap: var(--spacing-75);
+}
+
+.inline-control-form select {
+  min-width: 160px;
+}
+
+.maintainer-add-form {
+  max-width: 640px;
+}
+
+.status-owner {
+  color: var(--color-progressive);
+  background: var(--background-color-progressive-subtle);
+}
+
+.status-manager {
+  color: var(--color-warning);
+  background: var(--background-color-warning-subtle);
+}
+
+.status-maintainer {
+  color: var(--color-success);
+  background: var(--background-color-success-subtle);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: var(--spacing-0);
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: var(--spacing-0);
+}
+
 @media (max-width: 760px) {
   .task-card-grid,
   .settings-grid,
@@ -825,8 +901,9 @@ code,
   .details div,
   .artifact-list li,
   .panel-header,
-  .job-history-item,
-  .publish-review-header,
+    .job-history-item,
+    .maintainer-card,
+    .publish-review-header,
   .maintenance-card-header {
     grid-template-columns: 1fr;
     display: grid;

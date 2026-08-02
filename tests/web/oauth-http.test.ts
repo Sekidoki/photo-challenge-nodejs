@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { config } from "../../src/infra/config.js";
@@ -14,7 +17,9 @@ async function withOAuthHttpServer(
   oauthFetch: typeof fetch,
   run: (baseUrl: string, calls: OAuthFetchCall[]) => Promise<void>
 ): Promise<void> {
-  const previous = { ...config.oauth, allowedUsers: [...config.oauth.allowedUsers] };
+  const previous = { ...config.oauth };
+  const previousRegistryPath = config.accessControl.registryPath;
+  const registryDirectory = await mkdtemp(path.join(tmpdir(), "photo-challenge-http-maintainers-"));
   const calls = (oauthFetch as typeof oauthFetch & { calls?: OAuthFetchCall[] }).calls ?? [];
   let server: Server | null = null;
 
@@ -26,9 +31,9 @@ async function withOAuthHttpServer(
     authorizationUrl: "https://meta.example/oauth2/authorize",
     tokenUrl: "https://meta.example/oauth2/access_token",
     profileUrl: "https://meta.example/oauth2/resource/profile",
-    allowedUsers: [],
     configured: true
   });
+  config.accessControl.registryPath = path.join(registryDirectory, "maintainers.json");
   globalThis.fetch = oauthFetch;
 
   try {
@@ -39,10 +44,12 @@ async function withOAuthHttpServer(
     if (server) await close(server);
     globalThis.fetch = originalFetch;
     Object.assign(config.oauth, previous);
+    config.accessControl.registryPath = previousRegistryPath;
+    await rm(registryDirectory, { recursive: true, force: true });
   }
 }
 
-function createOAuthFetch(options: { expiresIn?: number } = {}): typeof fetch & { calls: OAuthFetchCall[] } {
+function createOAuthFetch(options: { expiresIn?: number; userName?: string } = {}): typeof fetch & { calls: OAuthFetchCall[] } {
   const calls: OAuthFetchCall[] = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     const url = String(input);
@@ -58,7 +65,7 @@ function createOAuthFetch(options: { expiresIn?: number } = {}): typeof fetch & 
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
 
-    return new globalThis.Response(JSON.stringify({ username: "HTTP Maintainer" }), {
+    return new globalThis.Response(JSON.stringify({ username: options.userName ?? "Sekidoki" }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
@@ -156,6 +163,89 @@ test("OAuth HTTP callback failures emit a sanitized operational event", async ()
     assert.equal(records[0].includes("secret-authorization-code"), false);
     assert.equal(records[0].includes("User-Agent"), false);
     assert.equal(records[0].includes("127.0.0.1"), false);
+  });
+});
+
+test("OAuth HTTP routes require an authorized maintainer before exposing job data", async () => {
+  await withOAuthHttpServer(createOAuthFetch(), async (baseUrl) => {
+    const response = await request(baseUrl, "/jobs/example", new Map());
+    assert.equal(response.status, 302);
+    assert.match(response.headers.get("location") ?? "", /^\/auth\/login\?returnTo=/);
+  });
+});
+
+test("OAuth HTTP callback fails closed for users outside the maintainer registry", async () => {
+  await withOAuthHttpServer(createOAuthFetch({ userName: "Not Authorized" }), async (baseUrl) => {
+    const cookies: CookieJar = new Map();
+    const callback = await completeLogin(baseUrl, cookies);
+    assert.equal(callback.status, 302);
+    assert.match(callback.headers.get("location") ?? "", /authError=/);
+    assert.equal(cookies.has("photo_challenge_session"), false);
+  });
+});
+
+test("protected owner manages the persistent maintainer list from the Web UI", async () => {
+  const oauthOptions: { userName?: string } = { userName: "Sekidoki" };
+  await withOAuthHttpServer(createOAuthFetch(oauthOptions), async (baseUrl) => {
+    const cookies: CookieJar = new Map();
+    await completeLogin(baseUrl, cookies);
+
+    const page = await request(baseUrl, "/maintainers", cookies);
+    assert.equal(page.status, 200);
+    const html = await page.text();
+    assert.match(html, /Sekidoki/);
+    assert.match(html, /Protected owner/);
+    const csrfToken = html.match(/name="csrfToken" value="([^"]+)"/)?.[1];
+    assert(csrfToken);
+
+    const add = await request(baseUrl, "/maintainers", cookies, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrfToken, userName: "Second Maintainer", role: "manager" }).toString()
+    });
+    assert.equal(add.status, 302);
+    assert.equal(add.headers.get("location"), "/maintainers?updated=1");
+
+    const updated = await request(baseUrl, "/maintainers", cookies);
+    assert.match(await updated.text(), /Second Maintainer/);
+
+    oauthOptions.userName = "Second Maintainer";
+    const managerCookies: CookieJar = new Map();
+    const managerCallback = await completeLogin(baseUrl, managerCookies);
+    assert.equal(managerCallback.status, 302);
+    assert.equal((await request(baseUrl, "/maintainers", managerCookies)).status, 200);
+
+    const removeManager = await request(baseUrl, "/maintainers/remove", cookies, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrfToken, userName: "Second Maintainer" }).toString()
+    });
+    assert.equal(removeManager.status, 302);
+    const revokedSession = await request(baseUrl, "/maintainers", managerCookies);
+    assert.equal(revokedSession.status, 302);
+    assert.match(revokedSession.headers.get("location") ?? "", /^\/auth\/login/);
+
+    const removeOwner = await request(baseUrl, "/maintainers/remove", cookies, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrfToken, userName: "Sekidoki" }).toString()
+    });
+    assert.equal(removeOwner.status, 400);
+    assert.match(await removeOwner.text(), /protected owner/);
+  });
+});
+
+test("maintainer management rejects invalid CSRF tokens", async () => {
+  await withOAuthHttpServer(createOAuthFetch(), async (baseUrl) => {
+    const cookies: CookieJar = new Map();
+    await completeLogin(baseUrl, cookies);
+    const response = await request(baseUrl, "/maintainers", cookies, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "csrfToken=wrong&userName=Unexpected&role=maintainer"
+    });
+    assert.equal(response.status, 403);
+    assert.match(await response.text(), /invalid or expired/i);
   });
 });
 

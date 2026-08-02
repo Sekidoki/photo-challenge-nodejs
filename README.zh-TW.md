@@ -20,7 +20,7 @@
 - 設定 `BOT_PASSWORD`
 - 視需要設定 `USER_AGENT`、`PORT`、`CREDENTIAL_SERVICE_NAME`
 
-共享 Web 部署時，請在 Meta-Wiki 註冊 confidential OAuth 2 application，callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons；如要限定維護者，可用逗號分隔的 `WIKIMEDIA_OAUTH_ALLOWED_USERS`。
+共享 Web 部署時，請在 Meta-Wiki 註冊 confidential OAuth 2 application，callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；`Sekidoki` 是受保護的擁有者。
 
 ## 安裝
 

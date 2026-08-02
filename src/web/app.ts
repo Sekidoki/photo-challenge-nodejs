@@ -4,7 +4,9 @@ import { create } from "express-handlebars";
 import { indexRouter } from "./routes/index.js";
 import { jobsRouter } from "./routes/jobs.js";
 import { authRouter } from "./routes/auth.js";
+import { maintainersRouter } from "./routes/maintainers.js";
 import { getOAuthSession, isOAuthConfigured } from "./oauth-session.js";
+import { canManageMaintainers } from "../infra/maintainer-registry.js";
 import {
   buildLanguageSwitchUrl,
   createTranslator,
@@ -60,7 +62,13 @@ export function createApp() {
       };
       const oauthSession = await getOAuthSession(request, response);
       response.locals.oauthConfigured = isOAuthConfigured();
-      response.locals.oauthUser = oauthSession ? { name: oauthSession.userName } : null;
+      response.locals.oauthUser = oauthSession
+        ? {
+            name: oauthSession.userName,
+            role: oauthSession.role,
+            canManageMaintainers: canManageMaintainers(oauthSession.role)
+          }
+        : null;
       response.locals.csrfToken = oauthSession?.csrfToken ?? "";
       next();
     } catch (error) {
@@ -69,6 +77,7 @@ export function createApp() {
   });
 
   app.use("/auth", authRouter);
+  app.use("/", maintainersRouter);
   app.use("/", indexRouter);
   app.use("/jobs", jobsRouter);
 

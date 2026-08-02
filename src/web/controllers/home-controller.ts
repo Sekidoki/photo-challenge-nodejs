@@ -70,8 +70,8 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
   const t = createTranslator(locale);
   const savedName = await getSavedName();
   const credentialStore = getCredentialStoreStatus();
-  const recentJobs = await getRecentJobs(locale, t);
   const oauthConfigured = isOAuthConfigured();
+  const recentJobs = oauthConfigured && !options.oauthUserName ? [] : await getRecentJobs(locale, t);
 
   return {
     title: t("app.runner"),

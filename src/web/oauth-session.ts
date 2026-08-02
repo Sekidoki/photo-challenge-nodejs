@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import type { Request, Response } from "express";
 import { config } from "../infra/config.js";
 import { recordOperationalEvent } from "../infra/operational-events.js";
+import { getMaintainerRole, type MaintainerRole } from "../infra/maintainer-registry.js";
 
 const sessionCookieName = "photo_challenge_session";
 const loginStateCookieName = "photo_challenge_oauth_state";
@@ -25,7 +26,9 @@ type StoredOAuthSession = {
   csrfToken: string;
 };
 
-export type OAuthSession = Pick<StoredOAuthSession, "userName" | "accessToken" | "csrfToken" | "expiresAt">;
+export type OAuthSession = Pick<StoredOAuthSession, "userName" | "accessToken" | "csrfToken" | "expiresAt"> & {
+  role: MaintainerRole;
+};
 
 type TokenResponse = {
   access_token?: unknown;
@@ -104,7 +107,10 @@ export async function completeOAuthLogin(
     code_verifier: pending.codeVerifier
   }));
   const profile = await requestProfile(fetchImpl, token.accessToken);
-  enforceAllowedUser(profile.userName);
+  const role = await getMaintainerRole(profile.userName);
+  if (!role) {
+    throw new Error(`Wikimedia user ${profile.userName} is not allowed to maintain this tool.`);
+  }
 
   const id = randomToken();
   sessions.set(id, {
@@ -142,6 +148,13 @@ export async function getOAuthSession(
     return null;
   }
 
+  const role = await getMaintainerRole(session.userName);
+  if (!role) {
+    sessions.delete(sessionId);
+    response?.clearCookie(sessionCookieName, cookieOptions());
+    return null;
+  }
+
   if (session.accessTokenExpiresAt <= Date.now() + refreshSkewMs) {
     if (!session.refreshToken) {
       sessions.delete(sessionId);
@@ -173,7 +186,7 @@ export async function getOAuthSession(
     }
   }
 
-  return toPublicSession(session);
+  return toPublicSession(session, role);
 }
 
 export function clearOAuthSession(request: Request, response: Response): void {
@@ -245,14 +258,6 @@ async function readJson<T>(response: globalThis.Response): Promise<T> {
   }
 }
 
-function enforceAllowedUser(userName: string): void {
-  if (config.oauth.allowedUsers.length === 0) return;
-  const normalized = userName.toLocaleLowerCase();
-  if (!config.oauth.allowedUsers.some((entry) => entry.toLocaleLowerCase() === normalized)) {
-    throw new Error(`Wikimedia user ${userName} is not allowed to maintain this tool.`);
-  }
-}
-
 function pruneExpiredRecords(): void {
   const now = Date.now();
   for (const [state, pending] of pendingLogins) {
@@ -321,11 +326,12 @@ function randomToken(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
 }
 
-function toPublicSession(session: StoredOAuthSession): OAuthSession {
+function toPublicSession(session: StoredOAuthSession, role: MaintainerRole): OAuthSession {
   return {
     userName: session.userName,
     accessToken: session.accessToken,
     csrfToken: session.csrfToken,
-    expiresAt: session.expiresAt
+    expiresAt: session.expiresAt,
+    role
   };
 }

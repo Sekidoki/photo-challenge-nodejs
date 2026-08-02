@@ -22,6 +22,9 @@
           <nav class="site-account" aria-label="{{t "account.navigation"}}">
           {{#if oauthUser}}
             <span>{{t "account.signedInAs" name=oauthUser.name}}</span>
+            {{#if oauthUser.canManageMaintainers}}
+              <a href="/maintainers">{{t "account.manageMaintainers"}}</a>
+            {{/if}}
             <form method="post" action="/auth/logout">
               <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
               <button type="submit" class="button-quiet">{{t "account.signOut"}}</button>

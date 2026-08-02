@@ -45,7 +45,7 @@ Browser -> GET /auth/login
 - Cookie 只含經 HMAC 簽章的 opaque session ID；HTTPS callback 時加上 `Secure`。
 - Login 使用一次性 state、10 分鐘期限與 PKCE S256。
 - 所有 OAuth 模式的 POST job/publish/logout 需通過 session CSRF token。
-- `WIKIMEDIA_OAUTH_ALLOWED_USERS` 可選擇限制維護者；留空表示任何同意授權的 Wikimedia 使用者都能操作。
+- 維護者授權採 fail-closed：`Sekidoki` 是受保護的擁有者，其他角色由登入後的 `/maintainers` 管理並持久保存。
 - 工作與發布使用當下登入者自己的 Wikimedia 權限，維護者不需共用專案擁有者的密碼。
 
 MediaWiki 官方 OAuth 文件說明 Authorization Code、refresh token、profile endpoint 與 Bearer token API 用法；OAuth app guidelines 要求 HTTPS、最小權限、清楚說明資料處理，且公開 app 需經 OAuth admin 審查。[開發者文件](https://www.mediawiki.org/wiki/OAuth/For_Developers) · [App guidelines](https://meta.wikimedia.org/wiki/OAuth_app_guidelines)
@@ -67,8 +67,9 @@ WIKIMEDIA_OAUTH_CLIENT_ID=...
 WIKIMEDIA_OAUTH_CLIENT_SECRET=...
 WIKIMEDIA_OAUTH_CALLBACK_URL=https://<tool-name>.toolforge.org/auth/callback
 WEB_SESSION_SECRET=<至少 32 bytes 的隨機值>
-WIKIMEDIA_OAUTH_ALLOWED_USERS=MaintainerOne,MaintainerTwo
 ```
+
+維護者名單不放在環境變數。擁有者可從 Web UI 授予名單管理員或一般維護者；名單管理員只能管理一般維護者。資料存於持久目錄的 `output/config/maintainers.json`，撤權後既有 session 會在下一次請求失效。
 
 目前 session 為單一 process 記憶體保存，因此部署先維持一個 replica。Pod 重啟後使用者需重新登入，但 refresh/access token 不會殘留在 NFS。若未來需要多 replica 或無感重啟，再導入 Toolforge 可用的共享資料庫，並以獨立 encryption key 加密 refresh token。
 
@@ -77,7 +78,7 @@ WIKIMEDIA_OAUTH_ALLOWED_USERS=MaintainerOne,MaintainerTwo
 ### 已完成：登入基礎
 
 - OAuth 2 login/callback/logout。
-- Token refresh、簽章 cookie、PKCE、CSRF、可選 allowlist。
+- Token refresh、簽章 cookie、PKCE、CSRF、fail-closed 維護者角色與 Web 管理頁。
 - Web workflow 與 publish 改用登入者 OAuth token。
 - CLI 與未設定 OAuth 的本機 Web 保留 BotPassword 相容性。
 

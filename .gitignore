@@ -22,6 +22,7 @@ pnpm-debug.log*
 
 # Generated outputs
 /output/jobs/*
+/output/config/*
 !/output/.gitkeep
 
 # Editor and OS noise
