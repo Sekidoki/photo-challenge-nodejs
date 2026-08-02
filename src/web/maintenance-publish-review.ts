@@ -6,6 +6,7 @@ import { readExistingPageContent } from "../workflows/publish-service.js";
 import { summarizeMaintenanceArtifact } from "./maintenance-review.js";
 import { summarizePublishDiff } from "./publish-review.js";
 import { buildDiffSummaryText } from "./standard-publish-review.js";
+import { createTranslator, type Translator } from "./i18n.js";
 
 export type MaintenancePublishReviewEntry = MaintenancePublishEntry & {
   status: "new" | "same" | "changed";
@@ -21,7 +22,8 @@ export async function buildMaintenancePublishReview(
   selectedIds: string[],
   loginName: string,
   bot: CommonsBot | null,
-  generatedFiles: Array<{ name: string; content: string }>
+  generatedFiles: Array<{ name: string; content: string }>,
+  t: Translator = createTranslator("en")
 ): Promise<{
   overview: ({ previewUrl: string; downloadUrl: string } & ReturnType<typeof summarizeMaintenanceArtifact>) | null;
   entries: MaintenancePublishReviewEntry[];
@@ -35,20 +37,20 @@ export async function buildMaintenancePublishReview(
       overview: null,
       entries: [],
       publishHistory: [],
-      warning: "Maintenance plan JSON was not found for this job.",
+      warning: t("maintenance.warning.noPlan"),
       canPublish: false
     };
   }
 
   const planResult = parseMaintenancePlanResult(overviewFile.content);
   const publishHistory = await loadMaintenancePublishHistory(job.id);
-  const overview = summarizeMaintenanceArtifact(overviewFile.name, overviewFile.content);
+  const overview = summarizeMaintenanceArtifact(overviewFile.name, overviewFile.content, t);
   if (!overview) {
     return {
       overview: null,
       entries: [],
       publishHistory,
-      warning: planResult.ok ? "Maintenance plan JSON could not be summarized for review." : planResult.error,
+      warning: planResult.ok ? t("maintenance.warning.noSummary") : planResult.error,
       canPublish: false
     };
   }
@@ -76,7 +78,7 @@ export async function buildMaintenancePublishReview(
       overview: overviewWithLinks,
       entries: [],
       publishHistory,
-      warning: "No publishable maintenance entries were found in the maintenance plan.",
+      warning: t("maintenance.warning.noEntries"),
       canPublish: false
     };
   }
@@ -87,13 +89,13 @@ export async function buildMaintenancePublishReview(
       entries: entries.map((entry) => ({
         ...entry,
         status: "changed",
-        statusLabel: "Ready to publish",
+        statusLabel: t("review.status.ready"),
         summary: `${entry.liveTargetTitle} -> ${entry.targetTitle}`,
-        diffSummary: "Sign in with Wikimedia or save a BotPassword to load live target content before publishing.",
+        diffSummary: t("maintenance.diff.signIn"),
         selected: selectedIds.length === 0 || selectedIds.includes(entry.id)
       })),
       publishHistory,
-      warning: "A Wikimedia sign-in or saved BotPassword is required to load live target content for maintenance review and publishing.",
+      warning: t("maintenance.warning.signIn"),
       canPublish: false
     };
   }
@@ -102,13 +104,13 @@ export async function buildMaintenancePublishReview(
   for (const entry of entries) {
     const currentContent = await readExistingPageContent(bot, entry.liveTargetTitle);
     const nextContent = applyMaintenancePublishEntry(currentContent, entry);
-    const diff = summarizePublishDiff(currentContent, nextContent);
+    const diff = summarizePublishDiff(currentContent, nextContent, t);
     reviewEntries.push({
       ...entry,
       status: diff.status,
-      statusLabel: diff.status === "new" ? "New target content" : diff.status === "same" ? "No changes" : "Changes detected",
+      statusLabel: diff.status === "new" ? t("review.status.newContent") : diff.status === "same" ? t("review.status.same") : t("review.status.changed"),
       summary: `${entry.liveTargetTitle} -> ${entry.targetTitle}`,
-      diffSummary: buildDiffSummaryText(diff),
+      diffSummary: buildDiffSummaryText(diff, t),
       selected: selectedIds.length === 0 || selectedIds.includes(entry.id)
     });
   }

@@ -1,19 +1,19 @@
 <section class="panel panel-wide">
   <div class="panel-header">
     <div>
-      <h1>Artifact Preview</h1>
-      <p class="lede"><code>{{fileName}}</code> from job <code>{{job.id}}</code>.</p>
+      <h1>{{t "artifact.title"}}</h1>
+      <p class="lede">{{t "artifact.lede" file=fileName id=job.id}}</p>
     </div>
     <div class="actions">
-      <a href="{{downloadUrl}}">Download</a>
-      <a href="/jobs/{{job.id}}/result">Back to result</a>
+      <a href="{{downloadUrl}}">{{t "common.download"}}</a>
+      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
     </div>
   </div>
 
   {{#if coreArtifacts.length}}
     <section class="preview-nav-card">
-      <h2>Core Outputs</h2>
-      <p class="lede">Switch between the main generated pages without leaving preview mode.</p>
+      <h2>{{t "artifact.core"}}</h2>
+      <p class="lede">{{t "artifact.switchCopy"}}</p>
       <div class="preview-nav-grid">
         {{#each coreArtifacts}}
           <article class="preview-nav-item {{#if isActive}}preview-nav-item-active{{/if}}">
@@ -22,11 +22,11 @@
             <p class="artifact-copy">{{description}}</p>
             <div class="preview-nav-actions">
               {{#if isActive}}
-                <span class="preview-nav-current">Currently open</span>
+                <span class="preview-nav-current">{{t "artifact.current"}}</span>
               {{else}}
-                <a class="preview-nav-link" href="{{previewUrl}}">Open preview</a>
+                <a class="preview-nav-link" href="{{previewUrl}}">{{t "artifact.open"}}</a>
               {{/if}}
-              <a class="preview-nav-link preview-nav-link-secondary" href="{{downloadUrl}}">Download</a>
+              <a class="preview-nav-link preview-nav-link-secondary" href="{{downloadUrl}}">{{t "common.download"}}</a>
             </div>
           </article>
         {{/each}}

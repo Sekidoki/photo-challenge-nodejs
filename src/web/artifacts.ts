@@ -2,6 +2,7 @@ import path from "node:path";
 import { readdir, readFile } from "node:fs/promises";
 import { LEGACY_VOTE_COUNTING_ACTION, VOTE_COUNTING_ACTION } from "../core/job-actions.js";
 import { getJobOutputPaths } from "../infra/output-paths.js";
+import { createTranslator, type Translator } from "./i18n.js";
 
 export type ArtifactKind = "generated" | "logs";
 
@@ -24,41 +25,41 @@ export type CoreArtifactEntry = ArtifactEntry & {
 const voteCountingArtifactDefinitions: Array<{
   type: CoreArtifactType;
   suffix: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }> = [
   {
     type: "result",
     suffix: "_result.txt",
-    label: "Result Page",
-    description: "Review the vote-counting result output."
+    labelKey: "coreArtifact.result.label",
+    descriptionKey: "coreArtifact.result.description"
   },
   {
     type: "winners",
     suffix: "_winners.txt",
-    label: "Winners Page",
-    description: "Open the final winners template content."
+    labelKey: "coreArtifact.winners.label",
+    descriptionKey: "coreArtifact.winners.description"
   },
   {
     type: "revised",
     suffix: "_revised.txt",
-    label: "Revised Voting",
-    description: "Inspect the cleaned voting page after validation."
+    labelKey: "coreArtifact.revised.label",
+    descriptionKey: "coreArtifact.revised.description"
   }
 ];
 
 const workflowArtifactDefinitions: Record<string, Array<{
   type: CoreArtifactType;
   suffix: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }>> = {
   "create-voting": [
     {
       type: "voting",
       suffix: "_voting.txt",
-      label: "Voting Page",
-      description: "Preview the generated voting page wikitext."
+      labelKey: "coreArtifact.voting.label",
+      descriptionKey: "coreArtifact.voting.description"
     }
   ],
   [VOTE_COUNTING_ACTION]: voteCountingArtifactDefinitions,
@@ -67,32 +68,32 @@ const workflowArtifactDefinitions: Record<string, Array<{
     {
       type: "maintenance-plan",
       suffix: "_maintenance_plan.json",
-      label: "Maintenance Plan",
-      description: "Inspect the combined dry-run edit plan for the post-results follow-up workflow."
+      labelKey: "maintenanceArtifact.plan.label",
+      descriptionKey: "maintenanceArtifact.plan.description"
     },
     {
       type: "notifications",
       suffix: "_winner_notifications.txt",
-      label: "Winner Notifications",
-      description: "Review the talk-page notification messages for podium winners."
+      labelKey: "maintenanceArtifact.notifications.label",
+      descriptionKey: "maintenanceArtifact.notifications.description"
     },
     {
       type: "announcement",
       suffix: "_challenge_announcement.txt",
-      label: "Central Announcement",
-      description: "Preview the combined Commons talk announcement for the paired challenges."
+      labelKey: "maintenanceArtifact.announcement.label",
+      descriptionKey: "maintenanceArtifact.announcement.description"
     },
     {
       type: "previous-page",
       suffix: "_previous_page_update.txt",
-      label: "Previous Page Update",
-      description: "Preview the text that should be prepended to Commons:Photo challenge/Previous."
+      labelKey: "maintenanceArtifact.previous.label",
+      descriptionKey: "maintenanceArtifact.previous.description"
     },
     {
       type: "file-assessments",
       suffix: "_file_assessments.json",
-      label: "File Assessments",
-      description: "Inspect the planned assessment edits for top-ranked files."
+      labelKey: "maintenanceArtifact.assessments.label",
+      descriptionKey: "maintenanceArtifact.assessments.description"
     }
   ]
 };
@@ -122,9 +123,14 @@ export async function loadGeneratedFiles(jobId: string): Promise<Array<{ name: s
   return files;
 }
 
-export async function loadCoreArtifacts(jobId: string, action: string, activeFileName?: string): Promise<CoreArtifactEntry[]> {
+export async function loadCoreArtifacts(
+  jobId: string,
+  action: string,
+  activeFileName?: string,
+  t: Translator = createTranslator("en")
+): Promise<CoreArtifactEntry[]> {
   const artifacts = await listArtifacts(jobId);
-  const { coreArtifacts } = classifyGeneratedArtifacts(artifacts.generated, action);
+  const { coreArtifacts } = classifyGeneratedArtifacts(artifacts.generated, action, t);
 
   return coreArtifacts.map((artifact) => ({
     ...artifact,
@@ -143,7 +149,11 @@ export async function listArtifacts(jobId: string): Promise<{ generated: Artifac
   };
 }
 
-export function classifyGeneratedArtifacts(generated: ArtifactEntry[], action: string): {
+export function classifyGeneratedArtifacts(
+  generated: ArtifactEntry[],
+  action: string,
+  t: Translator = createTranslator("en")
+): {
   coreArtifacts: CoreArtifactEntry[];
   otherGeneratedFiles: ArtifactEntry[];
 } {
@@ -160,8 +170,8 @@ export function classifyGeneratedArtifacts(generated: ArtifactEntry[], action: s
       {
         ...match,
         type: definition.type,
-        label: definition.label,
-        description: definition.description
+        label: t(definition.labelKey),
+        description: t(definition.descriptionKey)
       }
     ];
   });

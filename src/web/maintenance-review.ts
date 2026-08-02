@@ -11,7 +11,11 @@ export type MaintenanceReviewEntry = {
   excerpt: string[];
 };
 
-export function summarizeMaintenanceArtifact(fileName: string, content: string): MaintenanceReviewEntry | null {
+export function summarizeMaintenanceArtifact(
+  fileName: string,
+  content: string,
+  t: Translator = createTranslator("en")
+): MaintenanceReviewEntry | null {
   if (fileName.endsWith("_maintenance_plan.json")) {
     const plan = safeParseJson(content) as {
       mode?: string;
@@ -32,23 +36,28 @@ export function summarizeMaintenanceArtifact(fileName: string, content: string):
     const notifications = Array.isArray(plan.notifications) ? plan.notifications.length : 0;
     const assessments = Array.isArray(plan.assessmentPlans) ? plan.assessmentPlans.length : 0;
     const challengeCount = sources.length;
-    const pairedLabel = plan.pairedChallenge ? `Paired challenge: ${plan.pairedChallenge}` : "Paired challenge: none";
+    const pairedLabel = plan.pairedChallenge
+      ? t("maintenanceSummary.paired", { challenge: plan.pairedChallenge })
+      : t("maintenanceSummary.noPaired");
 
     return {
       type: "maintenance-plan",
-      label: "Maintenance Plan",
-      description: "Combined dry-run plan for follow-up maintenance work.",
+      label: t("maintenanceArtifact.plan.label"),
+      description: t("maintenanceArtifact.plan.description"),
       fileName,
       targetTitle: null,
       heading: null,
-      summary: `${challengeCount} source challenge(s), ${notifications} winner notification(s), ${assessments} assessment edit(s).`,
+      summary: t("maintenanceSummary.plan", { challenges: challengeCount, notifications, assessments }),
       excerpt: [
-        `Publish mode: ${plan.mode ?? "dry-run"}`,
-        `Primary challenge: ${plan.primaryChallenge ?? "(unknown)"}`,
+        t("maintenanceSummary.mode", { mode: plan.mode ?? t("mode.dry-run") }),
+        t("maintenanceSummary.primary", { challenge: plan.primaryChallenge ?? t("common.unknown") }),
         pairedLabel,
-        `Challenge announcement: ${plan.challengeAnnouncement ? "planned" : "not planned"}`,
-        `Previous page update: ${plan.previousPageUpdate ? "planned" : "not planned"}`,
-        ...sources.slice(0, 3).map((source) => `Source: ${source.challenge ?? "(unknown)"} <- ${source.jobId ?? "(unknown job)"}`)
+        t("maintenanceSummary.announcement", { state: t(plan.challengeAnnouncement ? "maintenanceSummary.planned" : "maintenanceSummary.notPlanned") }),
+        t("maintenanceSummary.previous", { state: t(plan.previousPageUpdate ? "maintenanceSummary.planned" : "maintenanceSummary.notPlanned") }),
+        ...sources.slice(0, 3).map((source) => t("maintenanceSummary.source", {
+          challenge: source.challenge ?? t("common.unknown"),
+          job: source.jobId ?? t("maintenanceSummary.unknownJob")
+        }))
       ]
     };
   }
@@ -58,12 +67,12 @@ export function summarizeMaintenanceArtifact(fileName: string, content: string):
     const headings = extractTaggedValues(content, "Heading");
     return {
       type: "notifications",
-      label: "Winner Notifications",
-      description: "Talk-page messages prepared for podium winners.",
+      label: t("maintenanceArtifact.notifications.label"),
+      description: t("maintenanceArtifact.notifications.description"),
       fileName,
       targetTitle: targets[0] ?? null,
       heading: headings[0] ?? null,
-      summary: `${targets.length} notification target(s) prepared.`,
+      summary: t("maintenanceSummary.notifications", { count: targets.length }),
       excerpt: buildExcerpt(content, 8)
     };
   }
@@ -73,12 +82,12 @@ export function summarizeMaintenanceArtifact(fileName: string, content: string):
     const headings = extractTaggedValues(content, "Heading");
     return {
       type: "announcement",
-      label: "Central Announcement",
-      description: "Combined Commons talk announcement for the paired challenges.",
+      label: t("maintenanceArtifact.announcement.label"),
+      description: t("maintenanceArtifact.announcement.description"),
       fileName,
       targetTitle: targets[0] ?? null,
       heading: headings[0] ?? null,
-      summary: `Announcement prepared for ${targets[0] ?? "the target page"}.`,
+      summary: t("maintenanceSummary.announcementTarget", { target: targets[0] ?? t("maintenanceSummary.targetPage") }),
       excerpt: buildExcerpt(content, 8)
     };
   }
@@ -87,12 +96,12 @@ export function summarizeMaintenanceArtifact(fileName: string, content: string):
     const firstHeading = content.split(/\r?\n/).map((line) => line.trim()).find((line) => line.startsWith("=="));
     return {
       type: "previous-page",
-      label: "Previous Page Update",
-      description: "Text intended to be prepended to Commons:Photo challenge/Previous.",
+      label: t("maintenanceArtifact.previous.label"),
+      description: t("maintenanceArtifact.previous.description"),
       fileName,
       targetTitle: "Commons:Photo challenge/Previous",
       heading: firstHeading ?? null,
-      summary: "Prepend block prepared for the Previous page.",
+      summary: t("maintenanceSummary.previousPrepared"),
       excerpt: buildExcerpt(content, 8)
     };
   }
@@ -105,13 +114,13 @@ export function summarizeMaintenanceArtifact(fileName: string, content: string):
 
     return {
       type: "file-assessments",
-      label: "File Assessments",
-      description: "Edit plans for adding assessment templates to top-ranked files.",
+      label: t("maintenanceArtifact.assessments.label"),
+      description: t("maintenanceArtifact.assessments.description"),
       fileName,
       targetTitle: plans[0]?.targetTitle ?? plans[0]?.title ?? null,
       heading: null,
-      summary: `${plans.length} file assessment edit(s) prepared.`,
-      excerpt: plans.slice(0, 5).map((plan) => plan.targetTitle ?? plan.title ?? "(unknown file)")
+      summary: t("maintenanceSummary.assessments", { count: plans.length }),
+      excerpt: plans.slice(0, 5).map((plan) => plan.targetTitle ?? plan.title ?? t("maintenanceSummary.unknownFile"))
     };
   }
 
@@ -142,3 +151,4 @@ function safeParseJson(content: string): unknown | null {
     return null;
   }
 }
+import { createTranslator, type Translator } from "./i18n.js";

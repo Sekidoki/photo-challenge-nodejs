@@ -1,11 +1,11 @@
 <section class="panel">
-  <h1>Job Result</h1>
-  <p class="lede">Job <code>{{job.id}}</code> finished with status <strong>{{job.status}}</strong>.</p>
+  <h1>{{t "result.title"}}</h1>
+  <p class="lede">{{t "result.lede" id=job.id status=job.status}}</p>
 
   <dl class="details">
-    <div><dt>Action</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>Challenge</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>Output</dt><dd><code>{{job.outputDir}}</code></dd></div>
+    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
+    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
+    <div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div>
   </dl>
 
   {{#if publishNotice}}
@@ -15,35 +15,35 @@
   {{#if canPublishReview}}
     <section class="publish-review-cta">
       <div>
-        <h2>Publish Review</h2>
-        <p class="lede">Open a final compare screen before writing generated pages to the selected Commons target.</p>
+        <h2>{{t "publishReview.title"}}</h2>
+        <p class="lede">{{t "result.publishCopy"}}</p>
       </div>
       <div class="actions">
-        <a href="{{publishReviewUrl}}">Review before publishing to {{publishModeLabel}}</a>
+        <a href="{{publishReviewUrl}}">{{t "result.reviewPublish" mode=publishModeLabel}}</a>
       </div>
     </section>
   {{else}}
     {{#if hasMaintenanceReview}}
       <section class="publish-review-cta">
         <div>
-          <h2>Maintenance Review</h2>
-          <p class="lede">Open a grouped review screen for notifications, announcements, Previous-page updates, and assessment plans.</p>
+          <h2>{{t "maintenanceReview.title"}}</h2>
+          <p class="lede">{{t "result.maintenanceCopy"}}</p>
         </div>
         <div class="actions">
-          <a href="{{maintenanceReviewUrl}}">Open maintenance review</a>
+          <a href="{{maintenanceReviewUrl}}">{{t "result.openMaintenance"}}</a>
         </div>
       </section>
     {{else}}
       <section class="publish-review-cta">
         <div>
-          <h2>Dry-run planning output</h2>
-          <p class="lede">This workflow currently generates follow-up maintenance plans only. Review the artifacts below before we add Web publishing for these edits.</p>
+          <h2>{{t "result.dryRunHeading"}}</h2>
+          <p class="lede">{{t "result.dryRunCopy"}}</p>
         </div>
       </section>
     {{/if}}
   {{/if}}
 
-  <h2>Core outputs</h2>
+  <h2>{{t "result.core"}}</h2>
   {{#if coreArtifacts.length}}
     <div class="artifact-grid">
       {{#each coreArtifacts}}
@@ -52,52 +52,52 @@
           <h3><code>{{name}}</code></h3>
           <p class="artifact-copy">{{description}}</p>
           <div class="artifact-actions">
-            <a href="{{previewUrl}}">Preview</a>
-            <a href="{{downloadUrl}}">Download</a>
+            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
+            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
           </div>
         </article>
       {{/each}}
     </div>
   {{else}}
-    <p>No core output files are available for this job yet.</p>
+    <p>{{t "result.noCore"}}</p>
   {{/if}}
 
-  <h2>Other generated files</h2>
+  <h2>{{t "result.other"}}</h2>
   {{#if generatedFiles.length}}
     <ul class="artifact-list">
       {{#each generatedFiles}}
         <li>
           <code>{{name}}</code>
           <span class="artifact-actions">
-            <a href="{{previewUrl}}">Preview</a>
-            <a href="{{downloadUrl}}">Download</a>
+            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
+            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
           </span>
         </li>
       {{/each}}
     </ul>
   {{else}}
-    <p>No additional generated files yet.</p>
+    <p>{{t "result.noOther"}}</p>
   {{/if}}
 
-  <h2>Log files</h2>
+  <h2>{{t "result.logs"}}</h2>
   {{#if logFiles.length}}
     <ul class="artifact-list">
       {{#each logFiles}}
         <li>
           <code>{{name}}</code>
           <span class="artifact-actions">
-            <a href="{{previewUrl}}">Preview</a>
-            <a href="{{downloadUrl}}">Download</a>
+            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
+            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
           </span>
         </li>
       {{/each}}
     </ul>
   {{else}}
-    <p>No log files yet.</p>
+    <p>{{t "result.noLogs"}}</p>
   {{/if}}
 
   <div class="actions">
-    <a href="/jobs/{{job.id}}">Back to progress</a>
-    <a href="/">Start another job</a>
+    <a href="/jobs/{{job.id}}">{{t "result.backProgress"}}</a>
+    <a href="/">{{t "common.startAnother"}}</a>
   </div>
 </section>

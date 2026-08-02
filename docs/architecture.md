@@ -107,6 +107,7 @@ The controller should not own artifact classification, diff review, maintenance 
 
 Web domain/service files:
 
+- `i18n.ts`: owns supported UI locales, the English/Traditional Chinese message catalog, request locale resolution, interpolation, and language-switch URLs. Templates use the `t` helper; review services receive a translator when their view-model text is user-facing.
 - `artifacts.ts`: lists generated/log artifacts, classifies core artifacts, and resolves artifact preview/download paths.
 - `publish-review.ts`: selects standard publish artifacts and summarizes diffs.
 - `standard-publish-review.ts`: builds standard publish review view models and publish plans.
@@ -114,6 +115,8 @@ Web domain/service files:
 - `maintenance-publish-review.ts`: builds maintenance publish review view models, including invalid-plan warnings and live diff review.
 
 Handlebars views only render view models. They should not read files, call Commons, or parse maintenance plans.
+
+The Web UI consumes pinned Wikimedia Codex design-token CSS from the installed package through a local static route; Toolforge pages do not depend on a third-party CDN. `styles.css` should use Codex variables for colors, borders, shadows, typography, and focus state. The dashboard's small JavaScript enhancement only reveals and enables settings for the selected workflow; the complete form remains usable as server-rendered HTML when JavaScript is unavailable.
 
 ### Web authentication
 

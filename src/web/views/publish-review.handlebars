@@ -1,20 +1,31 @@
 <section class="panel panel-wide">
   <div class="panel-header">
     <div>
-      <h1>Publish Review</h1>
-      <p class="lede">Review the generated outputs before writing them to <strong>{{reviewMode}}</strong> targets.</p>
+      <h1>{{t "publishReview.title"}}</h1>
+      <p class="lede">{{t "publishReview.lede" mode=publishContext.modeLabel}}</p>
     </div>
     <div class="actions">
-      <a href="{{alternateModeUrl}}">Switch to {{alternateMode}}</a>
-      <a href="/jobs/{{job.id}}/result">Back to result</a>
+      <a href="{{alternateModeUrl}}">{{t "publishReview.switch" mode=alternateModeLabel}}</a>
+      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
     </div>
   </div>
 
   <dl class="details">
-    <div><dt>Action</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>Challenge</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>Publish mode</dt><dd>{{reviewMode}}</dd></div>
+    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
+    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
+    <div><dt>{{t "publishReview.mode"}}</dt><dd>{{publishContext.modeLabel}}</dd></div>
   </dl>
+
+  <aside class="publish-safety-summary {{#if publishContext.isLive}}publish-safety-summary-live{{else}}publish-safety-summary-sandbox{{/if}}" aria-labelledby="publish-safety-title">
+    <h2 id="publish-safety-title">{{t "safety.heading"}}</h2>
+    <dl class="publish-safety-grid">
+      <div><dt>{{t "common.account"}}</dt><dd><code>{{publishContext.accountName}}</code></dd></div>
+      <div><dt>{{t "common.wiki"}}</dt><dd>{{publishContext.wikiLabel}}</dd></div>
+      <div><dt>{{t "common.mode"}}</dt><dd><strong>{{publishContext.modeLabel}}</strong></dd></div>
+      <div><dt>{{t "safety.targetCount"}}</dt><dd>{{publishContext.targetCount}}</dd></div>
+    </dl>
+    <p>{{#if publishContext.isLive}}{{t "safety.liveWarning"}}{{else}}{{t "safety.sandboxWarning"}}{{/if}}</p>
+  </aside>
 
   {{#if reviewNotice}}
     <div class="notice">{{reviewNotice}}</div>
@@ -24,7 +35,7 @@
     <div class="alert">{{reviewWarning}}</div>
   {{/if}}
 
-  <h2>Targets</h2>
+  <h2>{{t "common.targets"}}</h2>
   {{#if reviewEntries.length}}
     <div class="publish-review-list">
       {{#each reviewEntries}}
@@ -37,18 +48,18 @@
             <span class="status-pill publish-status-{{status}}">{{statusLabel}}</span>
           </div>
 
-          <p class="publish-target"><strong>Target:</strong> <code>{{targetTitle}}</code></p>
+          <p class="publish-target"><strong>{{t "publishReview.target"}}:</strong> <code>{{targetTitle}}</code></p>
           <p class="artifact-copy">{{summary}}</p>
 
           <div class="artifact-actions">
-            <a href="{{previewUrl}}">Preview generated file</a>
-            <a href="{{downloadUrl}}">Download</a>
+            <a href="{{previewUrl}}">{{t "publishReview.previewFile"}}</a>
+            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
           </div>
 
           <section class="diff-table-wrap">
             <div class="diff-table-head">
-              <span>Current target</span>
-              <span>Generated output{{#if firstDifferenceLine}} from line {{firstDifferenceLine}}{{/if}}</span>
+              <span>{{t "publishReview.currentTarget"}}</span>
+              <span>{{t "publishReview.generatedOutput"}}{{#if firstDifferenceLine}} {{t "publishReview.fromLine" line=firstDifferenceLine}}{{/if}}</span>
             </div>
             <div class="diff-table">
               {{#each diffRows}}
@@ -77,11 +88,11 @@
       <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
       <div class="actions">
-        <button type="submit">Publish to {{reviewMode}}</button>
-        <a href="/jobs/{{job.id}}/result">Cancel</a>
+        <button type="submit" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "publishReview.publish" mode=publishContext.modeLabel}}</button>
+        <a href="/jobs/{{job.id}}/result">{{t "common.cancel"}}</a>
       </div>
     </form>
   {{else}}
-    <p>No publishable outputs are available for this job.</p>
+    <p>{{t "publishReview.none"}}</p>
   {{/if}}
 </section>

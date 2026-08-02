@@ -1,26 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{htmlLang}}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{title}}</title>
+    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui.css" />
+    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui-mode-dark.css" media="(prefers-color-scheme: dark)" />
     <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/dashboard.js" defer></script>
   </head>
   <body>
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="site-brand" href="/">Photo Challenge</a>
-        <nav class="site-account" aria-label="Account">
+        <a class="site-brand" href="/">{{t "app.name"}}</a>
+        <div class="site-header-tools">
+          <nav class="language-switcher" aria-label="{{t "language.label"}}">
+            <a href="{{languageLinks.en}}" lang="en" hreflang="en">{{t "language.english"}}</a>
+            <span aria-hidden="true">·</span>
+            <a href="{{languageLinks.zhTW}}" lang="zh-TW" hreflang="zh-TW">{{t "language.traditionalChinese"}}</a>
+          </nav>
+          <nav class="site-account" aria-label="{{t "account.navigation"}}">
           {{#if oauthUser}}
-            <span>Signed in as <strong>{{oauthUser.name}}</strong></span>
+            <span>{{t "account.signedInAs" name=oauthUser.name}}</span>
             <form method="post" action="/auth/logout">
               <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
-              <button type="submit" class="button-quiet">Sign out</button>
+              <button type="submit" class="button-quiet">{{t "account.signOut"}}</button>
             </form>
           {{else if oauthConfigured}}
-            <a class="button-link" href="/auth/login">Sign in with Wikimedia</a>
+            <a class="button-link" href="/auth/login">{{t "account.signIn"}}</a>
           {{/if}}
-        </nav>
+          </nav>
+        </div>
       </div>
     </header>
     <main class="shell">

@@ -81,12 +81,14 @@ WIKIMEDIA_OAUTH_ALLOWED_USERS=MaintainerOne,MaintainerTwo
 - Web workflow 與 publish 改用登入者 OAuth token。
 - CLI 與未設定 OAuth 的本機 Web 保留 BotPassword 相容性。
 
-### 下一階段：前端一致性
+### 已完成：前端一致性
 
-- 以 Codex tokens 取代硬編碼色彩與 focus 樣式。
-- Dashboard 將三個 workflow 改為精簡的 task cards，設定欄位按選擇漸進展開。
-- 在每個 publish 頁固定顯示帳號、wiki、模式、目標數量與不可逆警告。
-- 加入繁中／英文 UI message catalog，避免文字散落在 controller 與 template。
+- 已固定使用 `@wikimedia/codex-design-tokens` 2.6.2；應用程式 CSS 的色彩、邊框、陰影與 focus 樣式改用官方 CSS variables，並依系統偏好載入 dark mode tokens。
+- Dashboard 的三個 workflow 與 publish mode 改為精簡 task-card grid；選定 workflow 後才顯示並啟用相關設定，未執行 JavaScript 時仍可看到所有欄位。
+- 標準 publish review 與 maintenance review 都以 sticky 安全摘要持續顯示帳號、Wikimedia Commons、模式及目標數量；live 模式使用破壞性警告與按鈕樣式，sandbox 則提示先行驗證。
+- `src/web/i18n.ts` 集中英文／繁中 UI message、請求語系判斷、插值與語言切換 URL；選擇會保存在 `ui_lang` cookie，頁面切換時保留原路徑與 query。
+- Web review service 接受 translator，讓 diff 狀態、警告與維護摘要不再散落成固定英文；缺少翻譯時回退英文。
+- 新增 message catalog 的語系優先序、插值、fallback 與 URL 保留測試。
 
 ### 後續：營運可靠性
 

@@ -1,87 +1,65 @@
 <section class="panel">
-  <h1>Photo Challenge Runner</h1>
-  <p class="lede">Prepare, review, and publish Wikimedia Commons Photo Challenge maintenance jobs.</p>
+  <h1>{{t "app.runner"}}</h1>
+  <p class="lede">{{t "home.lede"}}</p>
 
   {{#if oauthConfigured}}
-  <section class="credential-card">
-    <div class="panel-header">
-      <div>
-        <h2>Wikimedia Sign-in</h2>
-        {{#if oauthUser}}
-          <p class="lede">Jobs and published edits use your Wikimedia account and the permissions you approved.</p>
-        {{else}}
-          <p class="lede">Sign in before starting a job. The tool never receives your Wikimedia password.</p>
-        {{/if}}
-      </div>
-    </div>
-
-    {{#if oauthUser}}
-      <dl class="details details-compact">
-        <div><dt>Account</dt><dd><code>{{oauthUser.name}}</code></dd></div>
-        <div><dt>Credential storage</dt><dd>Server-side session only</dd></div>
-      </dl>
-    {{else}}
-      <div class="form-actions">
-        <a class="button-link" href="/auth/login">Sign in with Wikimedia</a>
-      </div>
-    {{/if}}
-  </section>
+    <section class="credential-card">
+      <h2>{{t "home.oauth.heading"}}</h2>
+      {{#if oauthUser}}
+        <p class="lede">{{t "home.oauth.signedInCopy"}}</p>
+        <dl class="details details-compact">
+          <div><dt>{{t "common.account"}}</dt><dd><code>{{oauthUser.name}}</code></dd></div>
+          <div><dt>{{t "home.oauth.storage"}}</dt><dd>{{t "home.oauth.sessionOnly"}}</dd></div>
+        </dl>
+      {{else}}
+        <p class="lede">{{t "home.oauth.signedOutCopy"}}</p>
+        <div class="form-actions"><a class="button-link" href="/auth/login">{{t "account.signIn"}}</a></div>
+      {{/if}}
+    </section>
   {{else}}
     <section class="credential-card">
-      <div class="panel-header">
-        <div>
-          <h2>Local BotPassword sign-in</h2>
-          <p class="lede">OAuth is not configured, so this instance uses the existing local credential store.</p>
-        </div>
-      </div>
+      <h2>{{t "home.local.heading"}}</h2>
+      <p class="lede">{{t "home.local.copy"}}</p>
       <dl class="details details-compact">
-        <div><dt>Storage</dt><dd>{{credentialStore.backendLabel}}</dd></div>
-        <div><dt>Persists</dt><dd>{{#if credentialStore.canPersistAcrossRestarts}}Yes{{else}}No, this session only{{/if}}</dd></div>
-        <div><dt>Saved name</dt><dd>{{#if savedCredential}}<code>{{savedCredential.name}}</code>{{else}}No saved sign-in{{/if}}</dd></div>
+        <div><dt>{{t "home.local.storage"}}</dt><dd>{{credentialStore.backendLabel}}</dd></div>
+        <div><dt>{{t "home.local.persists"}}</dt><dd>{{#if credentialStore.canPersistAcrossRestarts}}{{t "common.yes"}}{{else}}{{t "home.local.sessionOnly"}}{{/if}}</dd></div>
+        <div><dt>{{t "home.local.savedName"}}</dt><dd>{{#if savedCredential}}<code>{{savedCredential.name}}</code>{{else}}{{t "home.local.noSaved"}}{{/if}}</dd></div>
       </dl>
       {{#if savedCredential}}
         <form method="post" action="/credentials/clear" class="inline-form-actions">
           <input type="hidden" name="name" value="{{savedCredential.name}}" />
-          <button type="submit">Clear saved password</button>
+          <button type="submit" class="button-quiet">{{t "home.local.clear"}}</button>
         </form>
       {{/if}}
     </section>
-    {{#if oauthConfigurationMessage}}
-      <div class="notice">{{oauthConfigurationMessage}}</div>
-    {{/if}}
+    {{#if oauthConfigurationMessage}}<div class="notice">{{oauthConfigurationMessage}}</div>{{/if}}
   {{/if}}
 
   {{#if recentCompletedJob}}
     <section class="recent-job-card">
       <div class="panel-header">
         <div>
-          <h2>Recent Completed Job</h2>
-          <p class="lede">Jump back into the latest finished run without hunting through the output folder.</p>
+          <h2>{{t "home.recentCompleted.heading"}}</h2>
+          <p class="lede">{{t "home.recentCompleted.copy"}}</p>
         </div>
         <div class="actions">
-          <a href="{{recentCompletedJob.resultUrl}}">Open result</a>
-          <a href="{{recentCompletedJob.progressUrl}}">Open progress</a>
+          <a href="{{recentCompletedJob.resultUrl}}">{{t "home.openResult"}}</a>
+          <a href="{{recentCompletedJob.progressUrl}}">{{t "home.openProgress"}}</a>
         </div>
       </div>
-
       <dl class="details details-compact">
-        <div><dt>Challenge</dt><dd>{{recentCompletedJob.challenge}}</dd></div>
-        <div><dt>Action</dt><dd>{{recentCompletedJob.action}}</dd></div>
-        <div><dt>Finished</dt><dd>{{recentCompletedJob.finishedAtLabel}}</dd></div>
-        <div><dt>Job ID</dt><dd><code>{{recentCompletedJob.id}}</code></dd></div>
+        <div><dt>{{t "common.challenge"}}</dt><dd>{{recentCompletedJob.challenge}}</dd></div>
+        <div><dt>{{t "common.action"}}</dt><dd>{{recentCompletedJob.action}}</dd></div>
+        <div><dt>{{t "home.finished"}}</dt><dd>{{recentCompletedJob.finishedAtLabel}}</dd></div>
+        <div><dt>{{t "home.jobId"}}</dt><dd><code>{{recentCompletedJob.id}}</code></dd></div>
       </dl>
     </section>
   {{/if}}
 
   {{#if recentJobs.length}}
     <section class="recent-history-card">
-      <div class="panel-header">
-        <div>
-          <h2>Recent Jobs</h2>
-          <p class="lede">Quickly return to the latest runs, whether they completed, failed, or are still in progress.</p>
-        </div>
-      </div>
-
+      <h2>{{t "home.recent.heading"}}</h2>
+      <p class="lede">{{t "home.recent.copy"}}</p>
       <ul class="job-history-list">
         {{#each recentJobs}}
           <li class="job-history-item">
@@ -94,10 +72,8 @@
               <p class="job-history-meta">{{timestampLabel}}</p>
             </div>
             <div class="artifact-actions">
-              <a href="{{progressUrl}}">Progress</a>
-              {{#if (eq statusLabel "completed")}}
-                <a href="{{resultUrl}}">Result</a>
-              {{/if}}
+              <a href="{{progressUrl}}">{{t "home.progress"}}</a>
+              {{#if (eq statusCode "completed")}}<a href="{{resultUrl}}">{{t "home.result"}}</a>{{/if}}
             </div>
           </li>
         {{/each}}
@@ -105,145 +81,126 @@
     </section>
   {{/if}}
 
-  {{#if success}}
-    <div class="notice">{{success}}</div>
-  {{/if}}
+  {{#if success}}<div class="notice">{{success}}</div>{{/if}}
+  {{#if error}}<div class="alert">{{error}}</div>{{/if}}
 
-  {{#if error}}
-    <div class="alert">{{error}}</div>
-  {{/if}}
-
-  <form method="post" action="/jobs" class="form-grid">
-    {{#if oauthConfigured}}
-      <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
-    {{/if}}
+  <form method="post" action="/jobs" class="form-grid" data-dashboard-form>
+    {{#if oauthConfigured}}<input type="hidden" name="csrfToken" value="{{csrfToken}}" />{{/if}}
     {{#unless oauthConfigured}}
-    <label>
-      <span>Name</span>
-      <input name="name" type="text" value="{{defaults.name}}" required />
-      <small>Use the full BotPassword login name, for example <code>MainAccount@BotAppName</code>.</small>
-    </label>
-
-    <label>
-      <span>Bot Password</span>
-      <input name="botPassword" type="password" {{#unless savedCredential}}required{{/unless}} />
-      <small>{{#if savedCredential}}Leave blank to use the saved password for <code>{{savedCredential.name}}</code>.{{else}}Enter a BotPassword for Wikimedia Commons.{{/if}}</small>
-    </label>
-
-    <label class="checkbox-row">
-      <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
-      <span>Remember this password on this machine</span>
-    </label>
+      <label>
+        <span>{{t "home.local.name"}}</span>
+        <input name="name" type="text" value="{{defaults.name}}" required />
+        <small>{{t "home.local.nameHelp"}}</small>
+      </label>
+      <label>
+        <span>{{t "home.local.password"}}</span>
+        <input name="botPassword" type="password" {{#unless savedCredential}}required{{/unless}} />
+        <small>{{#if savedCredential}}{{t "home.local.passwordSavedHelp" name=savedCredential.name}}{{else}}{{t "home.local.passwordHelp"}}{{/if}}</small>
+      </label>
+      <label class="checkbox-row">
+        <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
+        <span>{{t "home.local.remember"}}</span>
+      </label>
     {{/unless}}
 
     <label>
-      <span>Challenge</span>
-      <input name="challenge" type="text" value="{{defaults.challenge}}" placeholder="2025 - January - Theme" required />
-    </label>
-
-    <label>
-      <span>Paired challenge</span>
-      <input name="pairedChallenge" type="text" value="{{defaults.pairedChallenge}}" placeholder="Optional, used for shared results announcements" />
-      <small>Used by post-results maintenance when you want a single central announcement and Previous-page update for two challenges.</small>
+      <span>{{t "common.challenge"}}</span>
+      <input name="challenge" type="text" value="{{defaults.challenge}}" placeholder="{{t "home.challenge.placeholder"}}" required />
     </label>
 
     <fieldset class="action-picker">
-      <legend>Prepare voting page settings</legend>
-      <p class="action-picker-copy">These settings apply only when preparing a voting page. The normal workflow is a single-month challenge inferred from the challenge name. Override the dates only when the community has approved an exceptional duration.</p>
-
-      <label>
-        <span>Entry mode</span>
-        <select name="entryMode">
-          <option value="single" {{#if (eq defaults.entryMode "single")}}selected{{/if}}>Single image</option>
-          <option value="duo-coequal" {{#if (eq defaults.entryMode "duo-coequal")}}selected{{/if}}>Two coequal submission images</option>
-          <option value="duo-reference" {{#if (eq defaults.entryMode "duo-reference")}}selected{{/if}}>Reference image and submission image</option>
-        </select>
-      </label>
-
-      <label>
-        <span>Submission start</span>
-        <input name="submissionStart" type="text" value="{{defaults.submissionStart}}" placeholder="2026-06-01T00:00:00Z" />
-        <small>Optional ISO date/time, inclusive.</small>
-      </label>
-
-      <label>
-        <span>Submission end</span>
-        <input name="submissionEnd" type="text" value="{{defaults.submissionEnd}}" placeholder="2026-07-01T00:00:00Z" />
-        <small>Optional ISO date/time, exclusive. Provide both dates or leave both blank.</small>
-      </label>
+      <legend>{{t "home.workflow.heading"}}</legend>
+      <p class="action-picker-copy">{{t "home.workflow.copy"}}</p>
+      <div class="task-card-grid">
+        <label class="action-card">
+          <input name="action" type="radio" value="create-voting" {{#if (eq defaults.action "create-voting")}}checked{{/if}} />
+          <span class="action-card-body">
+            <span class="action-card-title">{{t "home.workflow.voting.title"}}</span>
+            <span class="action-card-text">{{t "home.workflow.voting.text"}}</span>
+            <span class="action-card-meta">{{t "home.workflow.voting.meta"}}</span>
+          </span>
+        </label>
+        <label class="action-card">
+          <input name="action" type="radio" value="count-votes-and-select-winners" {{#if (eq defaults.action "count-votes-and-select-winners")}}checked{{/if}} />
+          <span class="action-card-body">
+            <span class="action-card-title">{{t "home.workflow.count.title"}}</span>
+            <span class="action-card-text">{{t "home.workflow.count.text"}}</span>
+            <span class="action-card-meta">{{t "home.workflow.count.meta"}}</span>
+          </span>
+        </label>
+        <label class="action-card">
+          <input name="action" type="radio" value="post-results-maintenance" {{#if (eq defaults.action "post-results-maintenance")}}checked{{/if}} />
+          <span class="action-card-body">
+            <span class="action-card-title">{{t "home.workflow.maintenance.title"}}</span>
+            <span class="action-card-text">{{t "home.workflow.maintenance.text"}}</span>
+            <span class="action-card-meta">{{t "home.workflow.maintenance.meta"}}</span>
+          </span>
+        </label>
+      </div>
     </fieldset>
 
-    <fieldset class="action-picker">
-      <legend>What do you want to do?</legend>
-      <p class="action-picker-copy">Pick the workflow that matches where the challenge is right now.</p>
-
-      <label class="action-card">
-        <input name="action" type="radio" value="create-voting" {{#if (eq defaults.action "create-voting")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Prepare voting page</span>
-          <span class="action-card-text">Read submission pages and build the voting page that people will vote on.</span>
-          <span class="action-card-meta">Use this before voting starts.</span>
-        </span>
-      </label>
-
-      <label class="action-card">
-        <input name="action" type="radio" value="count-votes-and-select-winners" {{#if (eq defaults.action "count-votes-and-select-winners")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Count votes and select winners</span>
-          <span class="action-card-text">Check votes, score entries, and generate revised voting, result, and winners pages.</span>
-          <span class="action-card-meta">Use this after voting has happened.</span>
-        </span>
-      </label>
-
-      <label class="action-card">
-        <input name="action" type="radio" value="post-results-maintenance" {{#if (eq defaults.action "post-results-maintenance")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Run post-results maintenance</span>
-          <span class="action-card-text">Prepare follow-up edits from completed results and optionally publish notifications, announcements, Previous-page updates, and file assessment templates.</span>
-          <span class="action-card-meta">Use this after winners are already known.</span>
-        </span>
-      </label>
-    </fieldset>
-
-    <fieldset class="action-picker">
-      <legend>Publish mode</legend>
-      <p class="action-picker-copy">Controls whether generated pages are written back to Wikimedia Commons.</p>
-
-      <label class="action-card">
-        <input name="publishMode" type="radio" value="dry-run" {{#if (eq defaults.publishMode "dry-run")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Dry run</span>
-          <span class="action-card-text">Generate all output files locally. Nothing is written to the wiki.</span>
-          <span class="action-card-meta">Safe to use at any time.</span>
-        </span>
-      </label>
-
-      <label class="action-card">
-        <input name="publishMode" type="radio" value="sandbox" {{#if (eq defaults.publishMode "sandbox")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Sandbox</span>
-          <span class="action-card-text">Write pages to <code>User:&lt;your main account&gt;/Sandbox/&lt;challenge&gt;/…</code> for review before going live.</span>
-          <span class="action-card-meta">Use this to verify output without touching real challenge pages.</span>
-        </span>
-      </label>
-
-      <label class="action-card">
-        <input name="publishMode" type="radio" value="live" {{#if (eq defaults.publishMode "live")}}checked{{/if}} />
-        <span class="action-card-body">
-          <span class="action-card-title">Live</span>
-          <span class="action-card-text">Write directly to the real Commons challenge pages. Use only after verifying sandbox output.</span>
-          <span class="action-card-meta action-card-meta--warn">Irreversible. Double-check the challenge name before submitting.</span>
-        </span>
-      </label>
-    </fieldset>
-
-    <div class="notice inline-notice">
-      <strong>Note:</strong> Post-results maintenance now supports <code>sandbox</code> and <code>live</code> for notifications, central announcements, Previous-page updates, and file assessment templates. Maintenance review remains available when you want to inspect each target before publishing.
+    <div class="workflow-settings" aria-live="polite">
+      <section data-workflow-settings="create-voting">
+        <h2>{{t "home.voting.heading"}}</h2>
+        <p class="action-picker-copy">{{t "home.voting.copy"}}</p>
+        <div class="settings-grid">
+          <label>
+            <span>{{t "home.voting.entryMode"}}</span>
+            <select name="entryMode">
+              <option value="single" {{#if (eq defaults.entryMode "single")}}selected{{/if}}>{{t "home.voting.single"}}</option>
+              <option value="duo-coequal" {{#if (eq defaults.entryMode "duo-coequal")}}selected{{/if}}>{{t "home.voting.duoCoequal"}}</option>
+              <option value="duo-reference" {{#if (eq defaults.entryMode "duo-reference")}}selected{{/if}}>{{t "home.voting.duoReference"}}</option>
+            </select>
+          </label>
+          <label>
+            <span>{{t "home.voting.start"}}</span>
+            <input name="submissionStart" type="text" value="{{defaults.submissionStart}}" placeholder="2026-06-01T00:00:00Z" />
+            <small>{{t "home.voting.startHelp"}}</small>
+          </label>
+          <label>
+            <span>{{t "home.voting.end"}}</span>
+            <input name="submissionEnd" type="text" value="{{defaults.submissionEnd}}" placeholder="2026-07-01T00:00:00Z" />
+            <small>{{t "home.voting.endHelp"}}</small>
+          </label>
+        </div>
+      </section>
+      <section data-workflow-settings="count-votes-and-select-winners">
+        <h2>{{t "home.settings.heading"}}</h2>
+        <p class="action-picker-copy">{{t "home.noExtraSettings"}}</p>
+      </section>
+      <section data-workflow-settings="post-results-maintenance">
+        <h2>{{t "home.settings.heading"}}</h2>
+        <label>
+          <span>{{t "home.maintenance.paired"}}</span>
+          <input name="pairedChallenge" type="text" value="{{defaults.pairedChallenge}}" placeholder="{{t "home.maintenance.pairedPlaceholder"}}" />
+          <small>{{t "home.maintenance.pairedHelp"}}</small>
+        </label>
+      </section>
     </div>
 
+    <fieldset class="action-picker">
+      <legend>{{t "home.publishMode.heading"}}</legend>
+      <p class="action-picker-copy">{{t "home.publishMode.copy"}}</p>
+      <div class="task-card-grid">
+        <label class="action-card">
+          <input name="publishMode" type="radio" value="dry-run" {{#if (eq defaults.publishMode "dry-run")}}checked{{/if}} />
+          <span class="action-card-body"><span class="action-card-title">{{t "home.publishMode.dryRun.title"}}</span><span class="action-card-text">{{t "home.publishMode.dryRun.text"}}</span><span class="action-card-meta">{{t "home.publishMode.dryRun.meta"}}</span></span>
+        </label>
+        <label class="action-card">
+          <input name="publishMode" type="radio" value="sandbox" {{#if (eq defaults.publishMode "sandbox")}}checked{{/if}} />
+          <span class="action-card-body"><span class="action-card-title">{{t "home.publishMode.sandbox.title"}}</span><span class="action-card-text">{{t "home.publishMode.sandbox.text"}}</span><span class="action-card-meta">{{t "home.publishMode.sandbox.meta"}}</span></span>
+        </label>
+        <label class="action-card">
+          <input name="publishMode" type="radio" value="live" {{#if (eq defaults.publishMode "live")}}checked{{/if}} />
+          <span class="action-card-body"><span class="action-card-title">{{t "home.publishMode.live.title"}}</span><span class="action-card-text">{{t "home.publishMode.live.text"}}</span><span class="action-card-meta action-card-meta--warn">{{t "home.publishMode.live.meta"}}</span></span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="notice inline-notice">{{t "home.maintenance.note"}}</div>
     <div class="form-actions">
-      <button type="submit" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>Start job</button>
-      {{#if oauthConfigured}}{{#unless oauthUser}}<a class="button-link" href="/auth/login">Sign in to continue</a>{{/unless}}{{/if}}
+      <button type="submit" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>{{t "home.start"}}</button>
+      {{#if oauthConfigured}}{{#unless oauthUser}}<a class="button-link" href="/auth/login">{{t "home.signInToContinue"}}</a>{{/unless}}{{/if}}
     </div>
   </form>
 </section>

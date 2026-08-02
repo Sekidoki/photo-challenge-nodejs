@@ -3,6 +3,7 @@ import type { JobProgress } from "../core/models.js";
 import type { CommonsBot } from "../services/commons-bot.js";
 import { readExistingPageContent, type StandardPublishPlan } from "../workflows/publish-service.js";
 import { buildPublishableArtifacts, summarizePublishDiff, type PublishableArtifact } from "./publish-review.js";
+import { createTranslator, type Translator } from "./i18n.js";
 
 export type PublishReviewEntry = {
   label: string;
@@ -33,34 +34,35 @@ export async function buildStandardPublishReview(
   mode: "sandbox" | "live",
   loginName: string,
   bot: CommonsBot | null,
-  generatedFiles: Array<{ name: string; content: string }>
+  generatedFiles: Array<{ name: string; content: string }>,
+  t: Translator = createTranslator("en")
 ): Promise<{ entries: PublishReviewEntry[]; warning: string | null }> {
   if (job.action !== "create-voting" && !isVoteCountingAction(job.action)) {
     return {
       entries: [],
-      warning: "This workflow does not publish challenge pages yet, so Web publish review is not available."
+      warning: t("review.warning.unsupported")
     };
   }
 
   if (!loginName) {
     return {
       entries: [],
-      warning: "This job does not record a login name, so the publish target cannot be reconstructed. Re-run the job before using Web publish review."
+      warning: t("review.warning.noLogin")
     };
   }
 
-  const artifacts = buildPublishableArtifacts({ ...job, loginName }, generatedFiles, mode);
+  const artifacts = buildPublishableArtifacts({ ...job, loginName }, generatedFiles, mode, t);
   if (artifacts.length === 0) {
     return {
       entries: [],
-      warning: "No publishable generated files were found for this job."
+      warning: t("review.warning.noFiles")
     };
   }
 
   if (!bot) {
     return {
-      entries: toReviewEntries(job.id, artifacts, new Map()),
-      warning: "A Wikimedia sign-in or saved BotPassword is required to load the current target pages for diff review. Sign in, then reopen this screen."
+      entries: toReviewEntries(job.id, artifacts, new Map(), t),
+      warning: t("review.warning.signIn")
     };
   }
 
@@ -70,7 +72,7 @@ export async function buildStandardPublishReview(
   }
 
   return {
-    entries: toReviewEntries(job.id, artifacts, currentContents),
+    entries: toReviewEntries(job.id, artifacts, currentContents, t),
     warning: null
   };
 }
@@ -87,10 +89,11 @@ export function toStandardPublishPlan(job: JobProgress, artifact: PublishableArt
 function toReviewEntries(
   jobId: string,
   artifacts: PublishableArtifact[],
-  currentContents: Map<string, string | null>
+  currentContents: Map<string, string | null>,
+  t: Translator
 ): PublishReviewEntry[] {
   return artifacts.map((artifact) => {
-    const summary = summarizePublishDiff(currentContents.get(artifact.fileName) ?? null, artifact.content);
+    const summary = summarizePublishDiff(currentContents.get(artifact.fileName) ?? null, artifact.content, t);
     return {
       label: artifact.label,
       fileName: artifact.fileName,
@@ -98,24 +101,31 @@ function toReviewEntries(
       previewUrl: `/jobs/${jobId}/artifacts/generated/${encodeURIComponent(artifact.fileName)}`,
       downloadUrl: `/jobs/${jobId}/artifacts/generated/${encodeURIComponent(artifact.fileName)}/download`,
       status: summary.status,
-      statusLabel: summary.status === "new" ? "New page" : summary.status === "same" ? "No changes" : "Changes detected",
-      summary: buildDiffSummaryText(summary),
+      statusLabel: summary.status === "new" ? t("review.status.new") : summary.status === "same" ? t("review.status.same") : t("review.status.changed"),
+      summary: buildDiffSummaryText(summary, t),
       firstDifferenceLine: summary.firstDifferenceLine,
       diffRows: summary.rows
     };
   });
 }
 
-export function buildDiffSummaryText(summary: ReturnType<typeof summarizePublishDiff>): string {
+export function buildDiffSummaryText(
+  summary: ReturnType<typeof summarizePublishDiff>,
+  t: Translator = createTranslator("en")
+): string {
   if (summary.status === "new") {
-    return `This target page does not exist yet. ${summary.nextLineCount} line(s) will be created.`;
+    return t("review.diff.new", { next: summary.nextLineCount });
   }
 
   if (summary.status === "same") {
-    return `The target page already matches this generated artifact (${summary.nextLineCount} line(s)).`;
+    return t("review.diff.same", { next: summary.nextLineCount });
   }
 
-  return `${summary.changedLineCount} differing line(s) detected. Current: ${summary.currentLineCount} line(s). Generated: ${summary.nextLineCount} line(s).`;
+  return t("review.diff.changed", {
+    changed: summary.changedLineCount,
+    current: summary.currentLineCount,
+    next: summary.nextLineCount
+  });
 }
 
 function buildPublishSummary(job: JobProgress, artifact: PublishableArtifact): string {

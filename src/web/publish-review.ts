@@ -1,5 +1,6 @@
 import type { JobProgress } from "../core/models.js";
 import { resolvePublishTarget } from "../workflows/run-job.js";
+import { createTranslator, type Translator } from "./i18n.js";
 
 type PublishArtifactType = "voting" | "result" | "winners" | "revised";
 type PublishTargetType = "voting" | "result" | "winners";
@@ -42,13 +43,13 @@ export type PublishDiffSummary = {
 const artifactDefinitions: Array<{
   type: PublishArtifactType;
   suffix: string;
-  label: string;
+  labelKey: string;
   targetType: PublishTargetType;
 }> = [
-  { type: "voting", suffix: "_voting.txt", label: "Voting Page", targetType: "voting" },
-  { type: "revised", suffix: "_revised.txt", label: "Revised Voting", targetType: "voting" },
-  { type: "result", suffix: "_result.txt", label: "Result Page", targetType: "result" },
-  { type: "winners", suffix: "_winners.txt", label: "Winners Page", targetType: "winners" }
+  { type: "voting", suffix: "_voting.txt", labelKey: "coreArtifact.voting.label", targetType: "voting" },
+  { type: "revised", suffix: "_revised.txt", labelKey: "coreArtifact.revised.label", targetType: "voting" },
+  { type: "result", suffix: "_result.txt", labelKey: "coreArtifact.result.label", targetType: "result" },
+  { type: "winners", suffix: "_winners.txt", labelKey: "coreArtifact.winners.label", targetType: "winners" }
 ];
 
 const LOOKAHEAD = 3;
@@ -57,7 +58,8 @@ const CONTEXT_LINES = 2;
 export function buildPublishableArtifacts(
   job: JobProgress,
   generatedFiles: Array<{ name: string; content: string }>,
-  mode: "sandbox" | "live"
+  mode: "sandbox" | "live",
+  t: Translator = createTranslator("en")
 ): PublishableArtifact[] {
   const artifacts = artifactDefinitions.flatMap((definition) => {
     const file = generatedFiles.find((entry) => entry.name.endsWith(definition.suffix));
@@ -65,7 +67,7 @@ export function buildPublishableArtifacts(
 
     return [{
       type: definition.type,
-      label: definition.label,
+      label: t(definition.labelKey),
       fileName: file.name,
       content: file.content,
       targetType: definition.targetType,
@@ -80,13 +82,17 @@ export function buildPublishableArtifacts(
   return artifacts;
 }
 
-export function summarizePublishDiff(currentContent: string | null, nextContent: string): PublishDiffSummary {
+export function summarizePublishDiff(
+  currentContent: string | null,
+  nextContent: string,
+  t: Translator = createTranslator("en")
+): PublishDiffSummary {
   const normalizedCurrent = normalizeContent(currentContent);
   const normalizedNext = normalizeContent(nextContent);
   const currentLines = splitLines(normalizedCurrent);
   const nextLines = splitLines(normalizedNext);
   const allRows = buildLineDiffRows(currentLines, nextLines);
-  const rows = compressDiffRows(allRows);
+  const rows = compressDiffRows(allRows, t);
 
   if (normalizedCurrent === null) {
     return {
@@ -213,7 +219,7 @@ function findAhead(lines: string[], startIndex: number, needle: string | undefin
   return -1;
 }
 
-function compressDiffRows(rows: PublishDiffRow[]): PublishDiffRow[] {
+function compressDiffRows(rows: PublishDiffRow[], t: Translator): PublishDiffRow[] {
   const changedIndices = rows
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => row.kind !== "same")
@@ -243,7 +249,7 @@ function compressDiffRows(rows: PublishDiffRow[]): PublishDiffRow[] {
     }
 
     if (!skipping) {
-      result.push(makeRow("skip", null, null, "", "… omitted unchanged lines …"));
+      result.push(makeRow("skip", null, null, "", t("review.diff.omitted")));
       skipping = true;
     }
   }

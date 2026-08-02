@@ -1,10 +1,10 @@
 <section class="panel">
-  <h1>Job Progress</h1>
-  <p class="lede">Job <code>{{job.id}}</code> is currently <strong>{{job.status}}</strong>.</p>
+  <h1>{{t "progress.title"}}</h1>
+  <p class="lede">{{t "progress.lede" id=job.id status=job.status}}</p>
 
   <div class="progress-card">
     <div class="progress-meta">
-      <span>Step: {{job.currentStep}}</span>
+      <span>{{t "progress.step" step=job.currentStep}}</span>
       <span>{{job.percent}}%</span>
     </div>
     <div class="progress-bar">
@@ -13,20 +13,20 @@
   </div>
 
   <dl class="details">
-    <div><dt>Action</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>Challenge</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>Output</dt><dd><code>{{job.outputDir}}</code></dd></div>
+    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
+    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
+    <div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div>
   </dl>
 
   {{#if (eq job.status "completed")}}
     <section class="progress-shortcuts">
       <div class="panel-header">
         <div>
-          <h2>Ready To Open</h2>
-          <p class="lede">The main generated pages are available right away from this progress screen.</p>
+          <h2>{{t "progress.ready"}}</h2>
+          <p class="lede">{{t "progress.readyCopy"}}</p>
         </div>
         <div class="actions">
-          <a href="/jobs/{{job.id}}/result">View full result</a>
+          <a href="/jobs/{{job.id}}/result">{{t "progress.fullResult"}}</a>
         </div>
       </div>
 
@@ -38,19 +38,19 @@
               <h3><code>{{name}}</code></h3>
               <p class="artifact-copy">{{description}}</p>
               <div class="artifact-actions">
-                <a href="{{previewUrl}}">Preview</a>
-                <a href="{{downloadUrl}}">Download</a>
+                <a href="{{previewUrl}}">{{t "common.preview"}}</a>
+                <a href="{{downloadUrl}}">{{t "common.download"}}</a>
               </div>
             </article>
           {{/each}}
         </div>
       {{else}}
-        <p>No core output files are available yet.</p>
+        <p>{{t "progress.noCore"}}</p>
       {{/if}}
     </section>
   {{/if}}
 
-  <h2>Messages</h2>
+  <h2>{{t "progress.messages"}}</h2>
   <ul class="messages">
     {{#each job.messages}}
       <li>{{this}}</li>
@@ -63,9 +63,9 @@
 
   <div class="actions">
     {{#if (eq job.status "completed")}}
-      <a href="/jobs/{{job.id}}/result">View result</a>
+      <a href="/jobs/{{job.id}}/result">{{t "progress.viewResult"}}</a>
     {{/if}}
-    <a href="/">Start another job</a>
+    <a href="/">{{t "common.startAnother"}}</a>
   </div>
 </section>
 

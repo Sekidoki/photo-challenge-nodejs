@@ -4,7 +4,6 @@ import type { BotCredentials, JobProgress, JobRequest } from "../../core/models.
 import {
   DEFAULT_JOB_ACTION,
   buildValidatedJobRequest,
-  getJobActionLabel,
   isVoteCountingAction,
   parseSubmissionWindowValues
 } from "../../core/job-actions.js";
@@ -31,6 +30,7 @@ import { buildPublishableArtifacts } from "../publish-review.js";
 import { buildStandardPublishReview, toStandardPublishPlan } from "../standard-publish-review.js";
 import { buildHomePageViewModel } from "./home-controller.js";
 import { getOAuthSession, isOAuthConfigured, validateCsrfToken } from "../oauth-session.js";
+import { createTranslator, getRequestLocale, type Translator } from "../i18n.js";
 
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
@@ -84,8 +84,11 @@ function getReviewMode(value: unknown, job: JobProgress): "sandbox" | "live" {
   return job.publishMode === "live" ? "live" : "sandbox";
 }
 
-function formatActionLabel(action: string): string {
-  return getJobActionLabel(action);
+function formatActionLabel(action: string, t: Translator): string {
+  if (action === "create-voting") return t("action.createVoting");
+  if (action === "count-votes-and-select-winners") return t("action.countVotes");
+  if (action === "post-results-maintenance") return t("action.maintenance");
+  return action;
 }
 
 async function getJobSnapshot(jobId: string): Promise<JobProgress | null> {
@@ -94,6 +97,8 @@ async function getJobSnapshot(jobId: string): Promise<JobProgress | null> {
 
 export async function createJob(request: Request, response: Response) {
   const body = request.body as Record<string, unknown>;
+  const locale = getRequestLocale(request);
+  const t = createTranslator(locale);
   const oauthSession = await getOAuthSession(request, response);
   const oauthRequired = isOAuthConfigured();
   if (oauthRequired && (!oauthSession || !validateCsrfToken(oauthSession, body.csrfToken))) {
@@ -101,8 +106,9 @@ export async function createJob(request: Request, response: Response) {
       "home",
       await buildHomePageViewModel({
         error: oauthSession
-          ? "The form expired or could not be verified. Reload the page and try again."
-          : "Sign in with Wikimedia before starting a job.",
+          ? t("home.error.expiredForm")
+          : t("home.error.signInFirst"),
+        locale,
         oauthUserName: oauthSession?.userName ?? null,
         defaults: buildHomeDefaults(body)
       })
@@ -123,7 +129,8 @@ export async function createJob(request: Request, response: Response) {
     response.status(400).render(
       "home",
       await buildHomePageViewModel({
-        error: error instanceof Error ? error.message : "Invalid voting page settings.",
+        error: error instanceof Error ? error.message : t("home.error.invalidSettings"),
+        locale,
         oauthUserName: oauthSession?.userName ?? null,
         defaults: buildHomeDefaults(authenticatedBody)
       })
@@ -145,8 +152,9 @@ export async function createJob(request: Request, response: Response) {
       "home",
       await buildHomePageViewModel({
         error: oauthRequired
-          ? "A Wikimedia sign-in and Challenge are required."
-          : "Name, stored Bot Password, and Challenge are required. Enter a password or save one for this machine.",
+          ? t("home.error.oauthRequired")
+          : t("home.error.localRequired"),
+        locale,
         oauthUserName: oauthSession?.userName ?? null,
         defaults: {
           name: jobRequest.credentials.name,
@@ -177,26 +185,28 @@ export async function createJob(request: Request, response: Response) {
 }
 
 export async function renderJobProgress(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const job = await getJobSnapshot(getRouteId(request.params.id));
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
-  const coreArtifacts = job.status === "completed" ? await loadCoreArtifacts(job.id, job.action) : [];
+  const coreArtifacts = job.status === "completed" ? await loadCoreArtifacts(job.id, job.action, undefined, t) : [];
 
   response.render("progress", {
-    title: `Job ${job.id}`,
+    title: `${t("progress.title")} ${job.id}`,
     job,
-    jobActionLabel: formatActionLabel(job.action),
+    jobActionLabel: formatActionLabel(job.action, t),
     coreArtifacts
   });
 }
 
 export async function getJobStatus(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const job = await getJobSnapshot(getRouteId(request.params.id));
   if (!job) {
-    response.status(404).json({ error: "Job not found" });
+    response.status(404).json({ error: t("error.jobNotFound") });
     return;
   }
 
@@ -204,29 +214,30 @@ export async function getJobStatus(request: Request, response: Response) {
 }
 
 export async function renderJobResult(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const job = await getJobSnapshot(getRouteId(request.params.id));
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
   const artifacts = await listArtifacts(job.id);
-  const { coreArtifacts, otherGeneratedFiles } = classifyGeneratedArtifacts(artifacts.generated, job.action);
+  const { coreArtifacts, otherGeneratedFiles } = classifyGeneratedArtifacts(artifacts.generated, job.action, t);
   const reviewMode = getReviewMode(request.query.mode, job);
   const notice = typeof request.query.notice === "string" ? request.query.notice : null;
   const canPublishReview = job.action === "create-voting" || isVoteCountingAction(job.action);
   const hasMaintenanceReview = job.action === "post-results-maintenance";
 
   response.render("result", {
-    title: `Result ${job.id}`,
+    title: `${t("result.title")} ${job.id}`,
     job,
-    jobActionLabel: formatActionLabel(job.action),
+    jobActionLabel: formatActionLabel(job.action, t),
     coreArtifacts,
     generatedFiles: otherGeneratedFiles,
     logFiles: artifacts.logs,
     publishReviewUrl: `/jobs/${job.id}/publish-review?mode=${reviewMode}`,
     publishNotice: notice,
-    publishModeLabel: reviewMode,
+    publishModeLabel: t(`mode.${reviewMode}`),
     canPublishReview,
     hasMaintenanceReview,
     maintenanceReviewUrl: `/jobs/${job.id}/maintenance-review`
@@ -234,10 +245,11 @@ export async function renderJobResult(request: Request, response: Response) {
 }
 
 export async function renderPublishReview(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   try {
     const job = await getJobSnapshot(getRouteId(request.params.id));
     if (!job) {
-      response.status(404).send("Job not found");
+      response.status(404).send(t("error.jobNotFound"));
       return;
     }
 
@@ -250,19 +262,22 @@ export async function renderPublishReview(request: Request, response: Response) 
       mode,
       loginName,
       await createReviewBot(credentials),
-      generatedFiles
+      generatedFiles,
+      t
     );
 
     response.render("publish-review", {
-      title: `Publish review ${job.id}`,
+      title: `${t("publishReview.title")} ${job.id}`,
       job,
-      jobActionLabel: formatActionLabel(job.action),
+      jobActionLabel: formatActionLabel(job.action, t),
       reviewEntries: review.entries,
       reviewMode: mode,
       alternateMode: mode === "sandbox" ? "live" : "sandbox",
+      alternateModeLabel: t(`mode.${mode === "sandbox" ? "live" : "sandbox"}`),
       alternateModeUrl: `/jobs/${job.id}/publish-review?mode=${mode === "sandbox" ? "live" : "sandbox"}`,
       reviewWarning: review.warning,
-      reviewNotice: typeof request.query.notice === "string" ? request.query.notice : null
+      reviewNotice: typeof request.query.notice === "string" ? request.query.notice : null,
+      publishContext: buildPublishContext(credentials?.name ?? loginName, mode, review.entries.length, t)
     });
   } catch (error) {
     if (isCommonsLoginError(error)) {
@@ -277,15 +292,16 @@ export async function renderPublishReview(request: Request, response: Response) 
 }
 
 export async function renderMaintenanceReview(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   try {
     const job = await getJobSnapshot(getRouteId(request.params.id));
     if (!job) {
-      response.status(404).send("Job not found");
+      response.status(404).send(t("error.jobNotFound"));
       return;
     }
 
     if (job.action !== "post-results-maintenance") {
-      response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent("This job uses the standard result view instead of maintenance review.")}`);
+      response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.standardMaintenanceView"))}`);
       return;
     }
 
@@ -300,21 +316,25 @@ export async function renderMaintenanceReview(request: Request, response: Respon
       selectedIds,
       loginName,
       await createReviewBot(credentials),
-      generatedFiles
+      generatedFiles,
+      t
     );
 
     response.render("maintenance-review", {
-      title: `Maintenance review ${job.id}`,
+      title: `${t("maintenanceReview.title")} ${job.id}`,
       job,
-      jobActionLabel: formatActionLabel(job.action),
+      jobActionLabel: formatActionLabel(job.action, t),
       overview: review.overview,
       reviewEntries: review.entries,
+      publishHistory: review.publishHistory,
       reviewMode: mode,
       alternateMode: mode === "sandbox" ? "live" : "sandbox",
+      alternateModeLabel: t(`mode.${mode === "sandbox" ? "live" : "sandbox"}`),
       alternateModeUrl: `/jobs/${job.id}/maintenance-review?mode=${mode === "sandbox" ? "live" : "sandbox"}`,
       reviewWarning: review.warning,
       reviewNotice: typeof request.query.notice === "string" ? request.query.notice : null,
-      canPublish: review.canPublish
+      canPublish: review.canPublish,
+      publishContext: buildPublishContext(credentials?.name ?? loginName, mode, review.entries.length, t)
     });
   } catch (error) {
     if (isCommonsLoginError(error)) {
@@ -329,14 +349,15 @@ export async function renderMaintenanceReview(request: Request, response: Respon
 }
 
 export async function publishMaintenanceOutputs(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const job = await getJobSnapshot(getRouteId(request.params.id));
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
   if (job.action !== "post-results-maintenance") {
-    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent("This job does not support maintenance publishing.")}`);
+    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.maintenanceUnsupported"))}`);
     return;
   }
 
@@ -344,12 +365,12 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   const mode = getReviewMode(body.mode ?? request.query.mode, job) as MaintenancePublishMode;
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("Sign in with Wikimedia again before publishing.")}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.signInAgain"))}`);
     return;
   }
   const selectedIds = normalizeSelectedValues(body.selected);
   if (selectedIds.length === 0) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("Select at least one maintenance entry to publish.")}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.selectMaintenance"))}`);
     return;
   }
 
@@ -358,7 +379,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   const generatedFiles = await loadGeneratedFiles(job.id);
   const planFile = generatedFiles.find((artifact) => artifact.name.endsWith("_maintenance_plan.json"));
   if (!planFile) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("Maintenance plan JSON was not found for this job.")}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("maintenance.warning.noPlan"))}`);
     return;
   }
 
@@ -371,7 +392,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   const entries = buildMaintenancePublishEntriesFromPlan(planResult.plan, loginName, mode);
   const selectedEntries = entries.filter((entry) => selectedIds.includes(entry.id));
   if (selectedEntries.length === 0) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent("None of the selected maintenance entries were available for publishing.")}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.noneSelected"))}`);
     return;
   }
 
@@ -398,19 +419,24 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
       }
     }
   );
-  const skipped = result.skippedTotal > 0 ? `, skipped ${result.skippedTotal}` : "";
-  response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(`Published ${result.publishedTotal} maintenance item(s) to ${mode}${skipped}.`)}`);
+  const skipped = result.skippedTotal > 0 ? t("publish.notice.skipped", { count: result.skippedTotal }) : "";
+  response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.notice.maintenancePublished", {
+    count: result.publishedTotal,
+    mode: t(`mode.${mode}`),
+    skipped
+  }))}`);
 }
 
 export async function publishJobOutputs(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const job = await getJobSnapshot(getRouteId(request.params.id));
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
   if (job.action !== "create-voting" && !isVoteCountingAction(job.action)) {
-    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent("This workflow does not support Web publishing yet.")}`);
+    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.workflowUnsupported"))}`);
     return;
   }
 
@@ -418,7 +444,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
   const mode = getReviewMode(body.mode ?? request.query.mode, job);
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent("Sign in with Wikimedia again before publishing.")}`);
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.signInAgain"))}`);
     return;
   }
   const loginName = credentials.name;
@@ -426,7 +452,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
   const generatedFiles = await loadGeneratedFiles(job.id);
   const artifacts = buildPublishableArtifacts({ ...job, loginName }, generatedFiles, mode);
   if (artifacts.length === 0) {
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent("No publishable generated files were found for this job.")}`);
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(t("review.warning.noFiles"))}`);
     return;
   }
 
@@ -452,35 +478,39 @@ export async function publishJobOutputs(request: Request, response: Response) {
     }
   );
 
-  response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(`Published ${publishedCount} page(s) to ${mode}.`)}`);
+  response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.notice.pagesPublished", {
+    count: publishedCount,
+    mode: t(`mode.${mode}`)
+  }))}`);
 }
 
 export async function renderArtifactPreview(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const jobId = getRouteId(request.params.id);
   const job = await getJobSnapshot(jobId);
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
   const kind = getArtifactKind(request.params.kind);
   const fileName = getArtifactName(request.params.fileName);
   if (!kind || !fileName) {
-    response.status(400).send("Invalid artifact path");
+    response.status(400).send(t("error.invalidArtifactPath"));
     return;
   }
 
   const artifactPath = resolveArtifactPath(jobId, kind, fileName);
   if (!artifactPath) {
-    response.status(404).send("Artifact not found");
+    response.status(404).send(t("error.artifactNotFound"));
     return;
   }
 
   const content = await readFile(artifactPath, "utf8");
-  const coreArtifacts = kind === "generated" ? await loadCoreArtifacts(job.id, job.action, fileName) : [];
+  const coreArtifacts = kind === "generated" ? await loadCoreArtifacts(job.id, job.action, fileName, t) : [];
 
   response.render("artifact-preview", {
-    title: `${fileName} preview`,
+    title: `${t("artifact.title")} — ${fileName}`,
     job,
     fileName,
     kind,
@@ -491,23 +521,24 @@ export async function renderArtifactPreview(request: Request, response: Response
 }
 
 export async function downloadArtifact(request: Request, response: Response) {
+  const t = createTranslator(getRequestLocale(request));
   const jobId = getRouteId(request.params.id);
   const job = await getJobSnapshot(jobId);
   if (!job) {
-    response.status(404).send("Job not found");
+    response.status(404).send(t("error.jobNotFound"));
     return;
   }
 
   const kind = getArtifactKind(request.params.kind);
   const fileName = getArtifactName(request.params.fileName);
   if (!kind || !fileName) {
-    response.status(400).send("Invalid artifact path");
+    response.status(400).send(t("error.invalidArtifactPath"));
     return;
   }
 
   const artifactPath = resolveArtifactPath(jobId, kind, fileName);
   if (!artifactPath) {
-    response.status(404).send("Artifact not found");
+    response.status(404).send(t("error.artifactNotFound"));
     return;
   }
 
@@ -577,5 +608,20 @@ function buildHomeDefaults(body: Record<string, unknown>) {
     submissionEnd: String(body.submissionEnd ?? "").trim(),
     action: String(body.action ?? DEFAULT_JOB_ACTION),
     publishMode: String(body.publishMode ?? "dry-run")
+  };
+}
+
+function buildPublishContext(
+  accountName: string,
+  mode: "sandbox" | "live",
+  targetCount: number,
+  t: Translator
+) {
+  return {
+    accountName: accountName || t("common.unknown"),
+    wikiLabel: t("common.wikimediaCommons"),
+    modeLabel: t(`mode.${mode}`),
+    targetCount,
+    isLive: mode === "live"
   };
 }
