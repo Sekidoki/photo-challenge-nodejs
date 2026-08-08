@@ -8,6 +8,7 @@ import {
   buildWinnerNotifications,
   insertAssessmentTemplate
 } from "../../src/workflows/post-results-maintenance.js";
+import { parsePublishedWinnersPage } from "../../src/workflows/run-post-results-maintenance.js";
 
 const orangeTopThree: ScoredVotingFile[] = [
   { num: 8, fileName: "Woman in traditional orange attire at Jaipur Literature Festival.jpg", title: "Woman in traditional orange attire at Jaipur Literature Festival", creator: "Amitash", score: 34, support: 14, rank: 1 },
@@ -20,6 +21,62 @@ const firstAidTopThree: ScoredVotingFile[] = [
   { num: 5, fileName: "First aid kit at station.jpg", title: "First aid kit at station", creator: "BlueSunrise", score: 13, support: 6, rank: 2 },
   { num: 9, fileName: "Volunteer first aid team.jpg", title: "Volunteer first aid team", creator: "Quickresponse", score: 10, support: 5, rank: 3 }
 ];
+
+test("parsePublishedWinnersPage restores both duo-coequal submission members", () => {
+  const files = parsePublishedWinnersPage({
+    title: "Commons:Photo challenge/2016 - December - Home appliances/Winners",
+    content: [
+      "{{Photo challenge winners table",
+      "|entry_mode = duo-coequal",
+      "|image_1 = Outside.jpg",
+      "|title_1 = Outside view",
+      "|image_1_2 = Inside.jpg",
+      "|title_1_2 = Inside view",
+      "|author_1 = PairMaker",
+      "|score_1 = 26",
+      "|rank_1 = 1",
+      "|num_1 = 9",
+      "}}"
+    ].join("\n"),
+    revisionTimestamp: "2017-03-01T00:00:00Z",
+    revisionId: 1
+  });
+
+  assert.equal(files[0]?.mode, "duo-coequal");
+  assert.deepEqual(files[0]?.members?.map((member) => [member.role, member.fileName]), [
+    ["submission", "Outside.jpg"],
+    ["submission", "Inside.jpg"]
+  ]);
+});
+
+test("parsePublishedWinnersPage keeps the formal image primary for duo-reference winners", () => {
+  const files = parsePublishedWinnersPage({
+    title: "Commons:Photo challenge/2015 - September-October - 100 years later/Winners",
+    content: [
+      "{{Photo challenge winners table",
+      "|entry_mode = duo-reference",
+      "|reference_image_1 = Archive.jpg",
+      "|reference_title_1 = Archive view",
+      "|image_1 = Modern.jpg",
+      "|title_1 = Modern <br/>view",
+      "|author_1 = Restager",
+      "|score_1 = 61",
+      "|rank_1 = 1",
+      "|num_1 = 8",
+      "}}"
+    ].join("\n"),
+    revisionTimestamp: "2016-01-01T00:00:00Z",
+    revisionId: 2
+  });
+
+  assert.equal(files[0]?.mode, "duo-reference");
+  assert.equal(files[0]?.fileName, "Modern.jpg");
+  assert.equal(files[0]?.title, "Modern view");
+  assert.deepEqual(files[0]?.members?.map((member) => [member.role, member.fileName]), [
+    ["reference", "Archive.jpg"],
+    ["submission", "Modern.jpg"]
+  ]);
+});
 
 test("buildWinnerNotifications mirrors the upstream talk-page template structure", () => {
   const notifications = buildWinnerNotifications("2026 - February - Orange", orangeTopThree);

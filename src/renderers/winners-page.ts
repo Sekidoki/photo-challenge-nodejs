@@ -27,13 +27,7 @@ function addLineBreaks(sentence: string, maxLength: number): string {
 
 export function renderWinnersPage(files: ScoredVotingFile[], challenge: string): string {
   const mode = inferMode(files);
-  if (mode === "duo-coequal") {
-    return renderDuoCoequalWinnersPage(files, challenge);
-  }
-  if (mode === "duo-reference") {
-    return renderDuoReferenceWinnersPage(files, challenge);
-  }
-  return renderSingleWinnersPage(files, challenge);
+  return renderWinnersTemplate(files, challenge, mode);
 }
 
 function inferMode(files: ScoredVotingFile[]): EntryMode {
@@ -56,54 +50,48 @@ function referenceMembers(file: ScoredVotingFile): Array<{ fileName: string; tit
   return file.members?.filter((member) => member.role === "reference" && member.fileName) ?? [];
 }
 
-function wikiUser(user: string): string {
-  return `[[User:${user}|${user}]]`;
-}
-
-function renderDuoNavCaption(challenge: string): string {
-  const theme = getTheme(challenge);
-  return `|+ <big>'''{{Photo challenge theme|${theme}}}: [[Commons:Photo challenge/${challenge}|Entries]] • [[Commons:Photo challenge/${challenge}/Voting|Votes]] • [[Commons:Photo challenge/${challenge}/Voting/Result|Scores]]'''</big>`;
-}
-
-function renderDuoTable(challenge: string, rows: string[][]): string {
-  const topThree = ["1", "2", "3"];
-  const lines = [
-    '{| class = "wikitable"',
-    "|-",
-    renderDuoNavCaption(challenge),
-    `! Rank !! ${topThree.join(" !! ")}`
-  ];
-
-  for (const row of rows) {
-    lines.push("|-");
-    const [label, ...cells] = row;
-    lines.push(`| ${[label, ...cells.slice(0, 3), ...Array(Math.max(0, 3 - cells.length)).fill("")].join(" || ")}`);
-  }
-
-  lines.push("|}");
-  lines.push("");
-  lines.push(`<noinclude>[[Category:Photo challenge/${challenge}]]</noinclude>`);
-  return `${lines.join("\n")}\n`;
-}
-
-function renderDuoTitleCells(files: ScoredVotingFile[], titlePicker: (file: ScoredVotingFile) => string): string[] {
-  return files.map((file) => addLineBreaks(titlePicker(file), 40));
-}
-
-function renderSingleWinnersPage(files: ScoredVotingFile[], challenge: string): string {
+function renderWinnersTemplate(files: ScoredVotingFile[], challenge: string, mode: EntryMode): string {
   const theme = getTheme(challenge);
   const topThree = files.slice(0, 3);
   const lines = [
     "{{Photo challenge winners table",
     `|page     = Photo challenge/${challenge}`,
-    `|theme    = ${theme}`,
-    "|height   = {{{height|240}}}"
+    `|theme    = ${theme}`
   ];
+
+  if (mode === "single") {
+    lines.push("|height   = {{{height|240}}}");
+  } else {
+    lines.push(`|entry_mode = ${mode}`);
+    lines.push("|height     = {{{height|240}}}");
+  }
 
   topThree.forEach((file, index) => {
     const n = index + 1;
-    lines.push(`|image_${n}  = ${file.fileName}`);
-    lines.push(`|title_${n}  = ${addLineBreaks(file.title, 40)}`);
+    const submissions = submissionMembers(file);
+
+    if (mode === "duo-coequal") {
+      const [first, second] = submissions;
+      lines.push(`|image_${n}    = ${first?.fileName ?? file.fileName}`);
+      lines.push(`|title_${n}    = ${addLineBreaks(first?.title ?? file.title, 40)}`);
+      if (second) {
+        lines.push(`|image_${n}_2  = ${second.fileName}`);
+        lines.push(`|title_${n}_2  = ${addLineBreaks(second.title, 40)}`);
+      }
+    } else if (mode === "duo-reference") {
+      const reference = referenceMembers(file)[0];
+      const submission = submissions[0];
+      if (reference) {
+        lines.push(`|reference_image_${n} = ${reference.fileName}`);
+        lines.push(`|reference_title_${n} = ${addLineBreaks(reference.title, 40)}`);
+      }
+      lines.push(`|image_${n}  = ${submission?.fileName ?? file.fileName}`);
+      lines.push(`|title_${n}  = ${addLineBreaks(submission?.title ?? file.title, 40)}`);
+    } else {
+      lines.push(`|image_${n}  = ${file.fileName}`);
+      lines.push(`|title_${n}  = ${addLineBreaks(file.title, 40)}`);
+    }
+
     lines.push(`|author_${n} = ${file.creator}`);
     lines.push(`|score_${n}  = ${file.score}`);
     lines.push(`|rank_${n}   = ${file.rank}`);
@@ -113,49 +101,4 @@ function renderSingleWinnersPage(files: ScoredVotingFile[], challenge: string): 
   lines.push("}}");
   lines.push("");
   return `${lines.join("\n")}\n`;
-}
-
-function renderDuoCoequalWinnersPage(files: ScoredVotingFile[], challenge: string): string {
-  const topThree = files.slice(0, 3);
-  const imageCells = topThree.map((file) => submissionMembers(file)
-    .map((member) => `[[File:${member.fileName}|x240px]]`)
-    .join("<br/>"));
-  const titleCells = renderDuoTitleCells(topThree, (file) => {
-    const submissions = submissionMembers(file);
-    return submissions.at(-1)?.title ?? file.title;
-  });
-  const authorCells = topThree.map((file) => wikiUser(file.creator));
-  const scoreCells = topThree.map((file) => String(file.score));
-
-  return renderDuoTable(challenge, [
-    ["Image", ...imageCells],
-    ["Title", ...titleCells],
-    ["Author", ...authorCells],
-    ["Score", ...scoreCells]
-  ]);
-}
-
-function renderDuoReferenceWinnersPage(files: ScoredVotingFile[], challenge: string): string {
-  const topThree = files.slice(0, 3);
-  const referenceImageCells = topThree.map((file) => {
-    const reference = referenceMembers(file)[0];
-    return reference ? `[[File:${reference.fileName}|x240px]]` : "";
-  });
-  const referenceTitleCells = renderDuoTitleCells(topThree, (file) => referenceMembers(file)[0]?.title ?? "");
-  const submissionImageCells = topThree.map((file) => {
-    const submission = submissionMembers(file)[0];
-    return `[[File:${submission?.fileName ?? file.fileName}|x240px]]`;
-  });
-  const submissionTitleCells = renderDuoTitleCells(topThree, (file) => submissionMembers(file)[0]?.title ?? file.title);
-  const authorCells = topThree.map((file) => wikiUser(file.creator));
-  const scoreCells = topThree.map((file) => String(file.score));
-
-  return renderDuoTable(challenge, [
-    ["Image", ...referenceImageCells],
-    ["Title", ...referenceTitleCells],
-    ["Image", ...submissionImageCells],
-    ["Title", ...submissionTitleCells],
-    ["Author", ...authorCells],
-    ["Score", ...scoreCells]
-  ]);
 }

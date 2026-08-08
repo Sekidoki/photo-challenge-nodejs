@@ -69,7 +69,7 @@ test("offline vote-counting pipeline matches expected Orange snippet outputs", (
   assert.equal(reviseVotingPage(source), readFixture("revised-orange-live-expected.txt"));
 });
 
-test("offline duo-coequal vote-counting pipeline renders paired result and winners outputs", () => {
+test("offline duo-coequal vote-counting pipeline renders paired result and shared-template winners outputs", () => {
   const parsed = parseVotingPage(readFixture("voting-page-duo-coequal-home-appliances.txt"));
   const scored = countVotes(parsed.entries, parsed.votes.map((vote) => ({ ...vote, error: 0 })));
 
@@ -78,11 +78,12 @@ test("offline duo-coequal vote-counting pipeline renders paired result and winne
 
   assert.match(result, /! Image1 !! Image2 !! Author/);
   assert.match(result, /\| \[\[File:[^\]]+\|120px\]\] \|\| \[\[File:[^\]]+\|120px\]\] \|\| \[\[User:/);
-  assert.match(winners, /\{\| class = "wikitable"/);
-  assert.match(winners, /\[\[File:[^\]]+\|x240px\]\]<br\/>\[\[File:[^\]]+\|x240px\]\]/);
+  assert.match(winners, /\|entry_mode = duo-coequal/);
+  assert.match(winners, /\|image_1\s+= Telefon W48 Schwarz\.jpg/);
+  assert.match(winners, /\|image_1_2\s+= Telefon W48 Grundplatte\.jpg/);
 });
 
-test("offline duo-reference vote-counting pipeline renders submission-only result and two-row winners outputs", () => {
+test("offline duo-reference vote-counting pipeline renders submission-only result and shared-template winners outputs", () => {
   const parsed = parseVotingPage(readFixture("voting-page-duo-reference-100-years-later.txt"));
   const scored = countVotes(parsed.entries, parsed.votes.map((vote) => ({ ...vote, error: 0 })));
 
@@ -92,6 +93,7 @@ test("offline duo-reference vote-counting pipeline renders submission-only resul
   assert.match(result, /! class="unsortable"\| Image/);
   assert.doesNotMatch(result, /Bamberg 1900\.jpg\|120px/);
   assert.match(result, /The old townhall of Bamberg 089\.jpg\|120px/);
-  assert.match(winners, /\| Image \|\| \[\[File:Bamberg 1900\.jpg\|x240px\]\]/);
-  assert.match(winners, /\| Image \|\| \[\[File:The old townhall of Bamberg 089\.jpg\|x240px\]\]/);
+  assert.match(winners, /\|entry_mode = duo-reference/);
+  assert.match(winners, /\|reference_image_1 = Bamberg 1900\.jpg/);
+  assert.match(winners, /\|image_1\s+= The old townhall of Bamberg 089\.jpg/);
 });

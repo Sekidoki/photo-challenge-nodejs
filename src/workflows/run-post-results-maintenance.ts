@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { isVoteCountingAction } from "../core/job-actions.js";
-import type { JobRequest } from "../core/models.js";
+import type { EntryMode, JobRequest } from "../core/models.js";
 import type { ScoredVotingFile } from "../core/scoring.js";
 import { config } from "../infra/config.js";
 import type { JobOutputPaths } from "../infra/output-paths.js";
@@ -279,27 +279,67 @@ function looksLikeDuoWinnersPage(content: string): boolean {
     && /\[\[File:[^\]]+\|x240px\]\]/i.test(content);
 }
 
-function parsePublishedWinnersPage(page: ReadPageResult): ScoredVotingFile[] {
+export function parsePublishedWinnersPage(page: ReadPageResult): ScoredVotingFile[] {
   const values = parseTemplateParameters(page.content);
   const files: ScoredVotingFile[] = [];
+  const mode = parseWinnerEntryMode(values.get("entry_mode"));
 
   for (let index = 1; index <= 3; index += 1) {
     const fileName = values.get(`image_${index}`);
     const creator = values.get(`author_${index}`);
     if (!fileName || !creator) continue;
 
+    const title = normalizeWinnerTitle(values.get(`title_${index}`) ?? fileName);
+    const members: NonNullable<ScoredVotingFile["members"]> = [{
+      role: "submission",
+      fileName,
+      title,
+      creator
+    }];
+
+    if (mode === "duo-coequal") {
+      const secondFileName = values.get(`image_${index}_2`);
+      if (secondFileName) {
+        members.push({
+          role: "submission",
+          fileName: secondFileName,
+          title: normalizeWinnerTitle(values.get(`title_${index}_2`) ?? secondFileName),
+          creator
+        });
+      }
+    } else if (mode === "duo-reference") {
+      const referenceFileName = values.get(`reference_image_${index}`);
+      if (referenceFileName) {
+        members.unshift({
+          role: "reference",
+          fileName: referenceFileName,
+          title: normalizeWinnerTitle(values.get(`reference_title_${index}`) ?? referenceFileName),
+          creator: ""
+        });
+      }
+    }
+
     files.push({
       num: Number.parseInt(values.get(`num_${index}`) ?? `${index}`, 10),
       fileName,
-      title: normalizeWinnerTitle(values.get(`title_${index}`) ?? fileName),
+      title,
       creator,
       score: Number.parseInt(values.get(`score_${index}`) ?? "0", 10),
       support: 0,
-      rank: Number.parseInt(values.get(`rank_${index}`) ?? `${index}`, 10)
+      rank: Number.parseInt(values.get(`rank_${index}`) ?? `${index}`, 10),
+      mode,
+      members
     });
   }
 
   return files;
+}
+
+function parseWinnerEntryMode(value: string | undefined): EntryMode {
+  if (value === "duo-coequal" || value === "duo-reference") {
+    return value;
+  }
+  return "single";
 }
 
 function parseTemplateParameters(content: string): Map<string, string> {

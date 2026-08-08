@@ -61,6 +61,8 @@ node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange"
 
 預設為單圖、單月挑戰。雙圖像挑戰可使用 `--entry-mode duo-coequal` 或 `--entry-mode duo-reference`。只有社群確認採用例外時長時，才覆寫 `--submission-start` 與 `--submission-end`；雙圖像模式本身不會自動延長投稿期間。
 
+三種投稿模式的得獎頁都使用 `{{Photo challenge winners table}}`。發布雙圖得獎結果前，請先將[專案內附的 Commons 模板原始碼](wiki/Template%20Photo%20challenge%20winners%20table.wikitext)部署到 Commons 模板；既有單圖參數仍然向後相容。
+
 ### 2. Count votes and select winners
 
 適用於投票結束後。

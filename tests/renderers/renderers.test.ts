@@ -15,6 +15,21 @@ function readFixture(name: string): string {
   return readFileSync(path.join(fixturesDir, name), "utf8").replace(/\r\n/g, "\n");
 }
 
+test("Commons winners template source preserves the current table chrome and supports all entry modes", () => {
+  const source = readFileSync(
+    path.resolve("wiki", "Template Photo challenge winners table.wikitext"),
+    "utf8"
+  );
+
+  assert.match(source, /^<!--/);
+  assert.match(source, /\{\| class = "wikitable"/);
+  assert.match(source, /\{\{#switch:\{\{\{entry_mode\|single\}\}\}/);
+  assert.match(source, /duo-coequal=/);
+  assert.match(source, /duo-reference=/);
+  assert.match(source, /\{\{\{comment_1\|/);
+  assert.match(source, /\[\[Category:Photo challenge templates\|Winners table\]\]/);
+});
+
 function submissionMember(fileName: string, user = "Photographer"): VotingEntryMember {
   return {
     role: "submission",
@@ -246,7 +261,7 @@ test("renderResultPage renders duo-reference entries using only the formal submi
   assert.doesNotMatch(rendered, /\[\[File:Archive\.jpg\|120px\]\]/);
 });
 
-test("renderWinnersPage renders duo-coequal winners as a hand-built pair table", () => {
+test("renderWinnersPage renders duo-coequal winners with the shared winners template", () => {
   const rendered = renderWinnersPage([
     scoredDuoFile("duo-coequal", [
       { role: "submission", fileName: "Outside.jpg", title: "Outside view", creator: "PairMaker" },
@@ -254,14 +269,17 @@ test("renderWinnersPage renders duo-coequal winners as a hand-built pair table",
     ], { score: 26 })
   ], "2016 - December - Home appliances");
 
-  assert.match(rendered, /\{\| class = "wikitable"/);
-  assert.match(rendered, /\[\[File:Outside\.jpg\|x240px\]\]<br\/>\[\[File:Inside\.jpg\|x240px\]\]/);
-  assert.match(rendered, /\| Title \|\| Inside view/);
-  assert.match(rendered, /\| Author \|\| \[\[User:PairMaker\|PairMaker\]\]/);
-  assert.match(rendered, /\[\[Category:Photo challenge\/2016 - December - Home appliances\]\]/);
+  assert.match(rendered, /^\{\{Photo challenge winners table/);
+  assert.match(rendered, /\|entry_mode = duo-coequal/);
+  assert.match(rendered, /\|image_1\s+= Outside\.jpg/);
+  assert.match(rendered, /\|title_1\s+= Outside view/);
+  assert.match(rendered, /\|image_1_2\s+= Inside\.jpg/);
+  assert.match(rendered, /\|title_1_2\s+= Inside view/);
+  assert.match(rendered, /\|author_1 = PairMaker/);
+  assert.match(rendered, /\|score_1\s+= 26/);
 });
 
-test("renderWinnersPage renders duo-reference winners with reference and submission rows", () => {
+test("renderWinnersPage renders duo-reference winners with the shared winners template", () => {
   const rendered = renderWinnersPage([
     scoredDuoFile("duo-reference", [
       { role: "reference", fileName: "Archive.jpg", title: "Archive view", creator: "" },
@@ -269,11 +287,14 @@ test("renderWinnersPage renders duo-reference winners with reference and submiss
     ], { score: 61 })
   ], "2015 - September-October - 100 years later");
 
-  assert.match(rendered, /\| Image \|\| \[\[File:Archive\.jpg\|x240px\]\]/);
-  assert.match(rendered, /\| Title \|\| Archive view/);
-  assert.match(rendered, /\| Image \|\| \[\[File:Modern\.jpg\|x240px\]\]/);
-  assert.match(rendered, /\| Title \|\| Modern view/);
-  assert.match(rendered, /\| Author \|\| \[\[User:Restager\|Restager\]\]/);
+  assert.match(rendered, /^\{\{Photo challenge winners table/);
+  assert.match(rendered, /\|entry_mode = duo-reference/);
+  assert.match(rendered, /\|reference_image_1 = Archive\.jpg/);
+  assert.match(rendered, /\|reference_title_1 = Archive view/);
+  assert.match(rendered, /\|image_1\s+= Modern\.jpg/);
+  assert.match(rendered, /\|title_1\s+= Modern view/);
+  assert.match(rendered, /\|author_1 = Restager/);
+  assert.match(rendered, /\|score_1\s+= 61/);
 });
 
 test("reviseVotingPage matches the current revised output for a historical Orange voting snippet", () => {

@@ -1,0 +1,25 @@
+<!--
+Supported entry modes:
+* single (default): image_N + title_N
+* duo-coequal: image_N + title_N and image_N_2 + title_N_2
+* duo-reference: reference_image_N + reference_title_N, then image_N + title_N for the formal submission
+
+The existing comment_N parameter still replaces the complete image cell.
+-->
+{| class = "wikitable"
+|-
+|+ <big>{{Photo challenge theme|{{{1|{{{theme}}}}}}}}: <!--
+-->[[Commons:{{{page}}}|{{#invoke:Autotranslate|autotranslate|base=Photo challenge winners table/i18n|entries}}]] • <!--
+-->[[Commons:{{{page}}}/Voting|{{#invoke:Autotranslate|autotranslate|base=Photo challenge winners table/i18n|votes}}]] • <!--
+-->[[Commons:{{{page}}}/Voting/Result|{{#invoke:Autotranslate|autotranslate|base=Photo challenge winners table/i18n|scores}}]]</big>
+! {{#invoke:Autotranslate|autotranslate|base=Photo challenge winners table/i18n|rank}} !! {{Q-|Q478798}}{{#if:{{{title_1|}}}{{{title_1_2|}}}{{{reference_title_1|}}}{{{title_2|}}}{{{title_2_2|}}}{{{reference_title_2|}}}{{{title_3|}}}{{{title_3_2|}}}{{{reference_title_3|}}}| !! {{int:wm-license-artwork-title}}|}} !! {{int:wm-license-information-author}} !! {{#invoke:Autotranslate|autotranslate|base=Photo challenge winners table/i18n|score}}
+|-
+| {{Photo challenge winners table/rank icon|{{{rank_1|1}}}}} #{{{rank_1|1}}} || {{{comment_1|{{#switch:{{{entry_mode|single}}}|duo-coequal=[[File:{{{image_1}}}|x{{{height|240}}}px]]{{#if:{{{image_1_2|}}}|<br />[[File:{{{image_1_2}}}|x{{{height|240}}}px]]}}|duo-reference={{#if:{{{reference_image_1|}}}|[[File:{{{reference_image_1}}}|x{{{height|240}}}px]]<br />}}[[File:{{{image_1}}}|x{{{height|240}}}px]]|#default=[[File:{{{image_1}}}|{{{width|330}}}px]]}}}}} {{#if:{{{title_1|}}}{{{title_1_2|}}}{{{reference_title_1|}}}{{{title_2|}}}{{{title_2_2|}}}{{{reference_title_2|}}}{{{title_3|}}}{{{title_3_2|}}}{{{reference_title_3|}}}| {{!}}{{!}} {{#switch:{{{entry_mode|single}}}|duo-coequal={{{title_1|}}}{{#if:{{{title_1_2|}}}|<br />{{{title_1_2}}}}}|duo-reference={{#if:{{{reference_title_1|}}}|{{{reference_title_1}}}<br />}}{{{title_1|}}}|#default={{{title_1|}}}}} |}} || [[User:{{{author_1}}}|{{{author_1}}}]] || align=right | {{{score_1}}}
+|-
+| {{Photo challenge winners table/rank icon|{{{rank_2|2}}}}} #{{{rank_2|2}}} || {{{comment_2|{{#switch:{{{entry_mode|single}}}|duo-coequal=[[File:{{{image_2}}}|x{{{height|240}}}px]]{{#if:{{{image_2_2|}}}|<br />[[File:{{{image_2_2}}}|x{{{height|240}}}px]]}}|duo-reference={{#if:{{{reference_image_2|}}}|[[File:{{{reference_image_2}}}|x{{{height|240}}}px]]<br />}}[[File:{{{image_2}}}|x{{{height|240}}}px]]|#default=[[File:{{{image_2}}}|{{{width|330}}}px]]}}}}} {{#if:{{{title_1|}}}{{{title_1_2|}}}{{{reference_title_1|}}}{{{title_2|}}}{{{title_2_2|}}}{{{reference_title_2|}}}{{{title_3|}}}{{{title_3_2|}}}{{{reference_title_3|}}}| {{!}}{{!}} {{#switch:{{{entry_mode|single}}}|duo-coequal={{{title_2|}}}{{#if:{{{title_2_2|}}}|<br />{{{title_2_2}}}}}|duo-reference={{#if:{{{reference_title_2|}}}|{{{reference_title_2}}}<br />}}{{{title_2|}}}|#default={{{title_2|}}}}} |}} || [[User:{{{author_2}}}|{{{author_2}}}]] || align=right | {{{score_2}}}
+|-
+| {{Photo challenge winners table/rank icon|{{{rank_3|3}}}}} #{{{rank_3|3}}} || {{{comment_3|{{#switch:{{{entry_mode|single}}}|duo-coequal=[[File:{{{image_3}}}|x{{{height|240}}}px]]{{#if:{{{image_3_2|}}}|<br />[[File:{{{image_3_2}}}|x{{{height|240}}}px]]}}|duo-reference={{#if:{{{reference_image_3|}}}|[[File:{{{reference_image_3}}}|x{{{height|240}}}px]]<br />}}[[File:{{{image_3}}}|x{{{height|240}}}px]]|#default=[[File:{{{image_3}}}|{{{width|330}}}px]]}}}}} {{#if:{{{title_1|}}}{{{title_1_2|}}}{{{reference_title_1|}}}{{{title_2|}}}{{{title_2_2|}}}{{{reference_title_2|}}}{{{title_3|}}}{{{title_3_2|}}}{{{reference_title_3|}}}| {{!}}{{!}} {{#switch:{{{entry_mode|single}}}|duo-coequal={{{title_3|}}}{{#if:{{{title_3_2|}}}|<br />{{{title_3_2}}}}}|duo-reference={{#if:{{{reference_title_3|}}}|{{{reference_title_3}}}<br />}}{{{title_3|}}}|#default={{{title_3|}}}}} |}} || [[User:{{{author_3}}}|{{{author_3}}}]] || align=right | {{{score_3}}}
+|}<noinclude>
+{{documentation}}
+[[Category:Photo challenge templates|Winners table]]
+</noinclude>

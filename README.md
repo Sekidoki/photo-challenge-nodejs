@@ -61,6 +61,8 @@ Outputs are written under `output/jobs/<job-id>/generated/`, including `*_voting
 
 The default is a single-image, single-month challenge. For paired-image challenges, use `--entry-mode duo-coequal` or `--entry-mode duo-reference`. Only override `--submission-start` and `--submission-end` when the community has approved an exceptional duration; paired-image mode does not automatically extend the submission window.
 
+Winner pages for all three entry modes use `{{Photo challenge winners table}}`. Before publishing paired-image winners, deploy [the bundled Commons template source](wiki/Template%20Photo%20challenge%20winners%20table.wikitext) to the Commons template; the existing single-image parameters remain backward compatible.
+
 ### 2. Count votes and select winners
 
 Use this after voting ends.
