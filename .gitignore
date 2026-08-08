@@ -1,6 +1,7 @@
 # Original python assets and plans
 /upstreams
 /docs/*
+/wiki
 !/docs/architecture.md
 !/docs/architecture.zh-TW.md
 !/docs/web-frontend-oauth-plan.zh-TW.md
