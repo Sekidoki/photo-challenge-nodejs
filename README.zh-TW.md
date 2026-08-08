@@ -10,7 +10,7 @@
 
 ## 環境需求
 
-- Node.js `26.5.1`
+- Node.js `26.7.0`
 - npm `12`
 - CLI 使用 Wikimedia Commons BotPassword；共享 Web 部署則使用 Wikimedia OAuth 2 client
 
@@ -91,7 +91,7 @@ npm run check:test
 npm test
 ```
 
-相容性狀態：目前已在 Node.js `26.5.1` 與 npm `12.0.2` 驗證通過。
+相容性狀態：目前已在 Node.js `26.7.0` 與 npm `12.0.2` 驗證通過。
 
 補充：
 - `.env` 不應進版控

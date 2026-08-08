@@ -5,7 +5,7 @@
   "description": "Node.js rewrite scaffold for Wikimedia Commons Photo Challenge tooling",
   "main": "dist/server.js",
   "engines": {
-    "node": ">=26.5.1 <27",
+    "node": ">=26.7.0 <27",
     "npm": ">=12 <13"
   },
   "scripts": {
@@ -38,6 +38,7 @@
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
+    "fsevents": false,
     "keytar@7.9.0": true
   }
 }

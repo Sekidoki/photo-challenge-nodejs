@@ -1,5 +1,6 @@
-import keytar from "keytar";
 import { config } from "./config.js";
+
+type KeytarApi = typeof import("keytar");
 
 type CredentialRecord = {
   name: string;
@@ -17,14 +18,20 @@ type CredentialStoreStatus = {
 const lastUsedAccount = "__last_used_name__";
 const memoryCredentials = new Map<string, string>();
 let backend: CredentialBackend = "system";
+let keytarPromise: Promise<KeytarApi> | null = null;
 
-async function useKeytar<T>(operation: () => Promise<T>): Promise<T> {
+function loadKeytar(): Promise<KeytarApi> {
+  keytarPromise ??= import("keytar");
+  return keytarPromise;
+}
+
+async function useKeytar<T>(operation: (keytar: KeytarApi) => Promise<T>): Promise<T> {
   if (backend === "memory") {
     throw new Error("System keychain unavailable");
   }
 
   try {
-    return await operation();
+    return await operation(await loadKeytar());
   } catch {
     backend = "memory";
     throw new Error("System keychain unavailable");
@@ -63,7 +70,7 @@ export async function getSavedName(): Promise<string | null> {
   }
 
   try {
-    return await useKeytar(() => keytar.getPassword(config.credentialServiceName, lastUsedAccount));
+    return await useKeytar((keytar) => keytar.getPassword(config.credentialServiceName, lastUsedAccount));
   } catch {
     return getMemoryValue(lastUsedAccount);
   }
@@ -79,7 +86,7 @@ export async function getCredentialPassword(name: string): Promise<string | null
   }
 
   try {
-    return await useKeytar(() => keytar.getPassword(config.credentialServiceName, name));
+    return await useKeytar((keytar) => keytar.getPassword(config.credentialServiceName, name));
   } catch {
     return getMemoryValue(name);
   }
@@ -97,8 +104,8 @@ export async function rememberCredential(name: string, botPassword: string): Pro
   }
 
   try {
-    await useKeytar(() => keytar.setPassword(config.credentialServiceName, name, botPassword));
-    await useKeytar(() => keytar.setPassword(config.credentialServiceName, lastUsedAccount, name));
+    await useKeytar((keytar) => keytar.setPassword(config.credentialServiceName, name, botPassword));
+    await useKeytar((keytar) => keytar.setPassword(config.credentialServiceName, lastUsedAccount, name));
   } catch {
     setMemoryValue(name, botPassword);
     setMemoryValue(lastUsedAccount, name);
@@ -120,10 +127,12 @@ export async function clearSavedCredential(name?: string): Promise<void> {
   }
 
   try {
-    await useKeytar(() => keytar.deletePassword(config.credentialServiceName, targetName));
-    const savedName = await useKeytar(() => keytar.getPassword(config.credentialServiceName, lastUsedAccount));
+    await useKeytar((keytar) => keytar.deletePassword(config.credentialServiceName, targetName));
+    const savedName = await useKeytar((keytar) =>
+      keytar.getPassword(config.credentialServiceName, lastUsedAccount)
+    );
     if (savedName === targetName) {
-      await useKeytar(() => keytar.deletePassword(config.credentialServiceName, lastUsedAccount));
+      await useKeytar((keytar) => keytar.deletePassword(config.credentialServiceName, lastUsedAccount));
     }
   } catch {
     deleteMemoryValue(targetName);
