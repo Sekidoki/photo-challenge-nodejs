@@ -150,6 +150,8 @@ output/jobs/<job-id>/
 
 `src/infra/job-history.ts` 會從 `logs/job.log` 重建過去 job。修改 log 欄位時要考慮舊 job 相容性。
 
+`src/infra/job-retention.ts` 會刪除最後修改時間超過 30 天的直屬 job 目錄。Web server 或 CLI 啟動前會先清理一次，Web process 之後每 24 小時再執行；output root 不存在或個別目錄刪除失敗時，不會阻止應用程式啟動。
+
 Maintenance publish history 存在 `generated/maintenance_publish_history.json`，由 `publish-service.ts` 透過 `recordMaintenancePublish` 寫入；新紀錄也包含 operator 與 OAuth consumer。`operational-events.ts` 會輸出可供 Toolforge logs 監控的登入失敗、refresh 失敗、publish failure、audit write failure 與 job duration 事件。
 
 在 Toolforge，`config.ts` 會使用 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`，使 job artifact 與 audit 在 Pod 重啟後仍保留；`PHOTO_CHALLENGE_DATA_ROOT` 可明確覆寫資料根目錄。部署時必須掛載持久儲存並維持單一 replica；營運要求統一定義於第 11 節。

@@ -1,8 +1,22 @@
 import { createApp } from "./web/app.js";
 import { config } from "./infra/config.js";
+import {
+  JOB_CLEANUP_INTERVAL_MS,
+  runJobRetentionCleanup
+} from "./infra/job-retention.js";
 
-const app = createApp();
+async function startServer(): Promise<void> {
+  await runJobRetentionCleanup();
 
-app.listen(config.port, () => {
-  console.log(`Photo Challenge web app listening on http://localhost:${config.port}`);
-});
+  const app = createApp();
+  app.listen(config.port, () => {
+    console.log(`Photo Challenge web app listening on http://localhost:${config.port}`);
+  });
+
+  const cleanupTimer = setInterval(() => {
+    void runJobRetentionCleanup();
+  }, JOB_CLEANUP_INTERVAL_MS);
+  cleanupTimer.unref();
+}
+
+void startServer();

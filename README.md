@@ -80,6 +80,7 @@ It creates winner notifications, challenge announcements, Previous-page updates,
 - saved credentials use the system keychain when available, with in-memory fallback for the current process
 - when OAuth is configured, Web jobs and publishes use the signed-in maintainer's short-lived OAuth token; the CLI continues to use BotPassword
 - job history is rebuilt from `output/jobs/*/logs/job.log`
+- job directories are checked when Web or CLI starts and every 24 hours while Web is running; `output/jobs/<job-id>/` directories last modified more than 30 days ago are removed automatically
 
 ## Validation and Troubleshooting
 
@@ -95,7 +96,7 @@ Compatibility status: the project is verified on Node.js `26.7.0` with npm `12.0
 
 Notes:
 - keep `.env` out of version control
-- preserve `output/jobs/` if you want to reopen past runs or review publish history
+- job and publish history is retained for up to 30 days; back up `output/jobs/` separately if longer retention is required
 - use `sandbox` before `live` when testing new workflow changes
 
 ## Project Status

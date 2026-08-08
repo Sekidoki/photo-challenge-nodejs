@@ -80,6 +80,7 @@ Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間
 - 已保存的登入資訊優先走系統 keychain，若不可用則退回本次程式執行期間的記憶體保存
 - 啟用 OAuth 後，Web job 與 publish 使用目前登入維護者的短期 OAuth token；CLI 仍維持 BotPassword
 - job history 會從 `output/jobs/*/logs/job.log` 重建
+- Web 啟動時及之後每 24 小時會檢查 job 目錄，CLI 啟動時也會檢查；最後修改時間超過 30 天的 `output/jobs/<job-id>/` 會自動刪除
 
 ## 驗證與排錯
 
@@ -95,7 +96,7 @@ npm test
 
 補充：
 - `.env` 不應進版控
-- 如果你要重新開啟舊 job 或查看 publish history，請保留 `output/jobs/`
+- job 與 publish history 最多保留 30 天；若需要長期保存，請另外備份 `output/jobs/`
 - 測試新流程時，先走 `sandbox` 再走 `live`
 
 ## 專案現況

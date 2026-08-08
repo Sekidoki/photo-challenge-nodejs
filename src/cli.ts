@@ -1,5 +1,6 @@
 import { runCli } from "./cli/index.js";
+import { runJobRetentionCleanup } from "./infra/job-retention.js";
 
-void runCli().then((exitCode) => {
+void runJobRetentionCleanup().then(() => runCli()).then((exitCode) => {
   process.exitCode = exitCode;
 });
