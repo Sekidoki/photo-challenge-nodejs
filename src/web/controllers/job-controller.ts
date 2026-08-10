@@ -33,6 +33,7 @@ import { getOAuthSession, isOAuthConfigured, validateCsrfToken } from "../oauth-
 import { createTranslator, getRequestLocale, type Translator } from "../i18n.js";
 import { recordOperationalEvent } from "../../infra/operational-events.js";
 import type { PublishAuditContext } from "../../infra/publish-audit.js";
+import { isJobOwnedBy } from "../job-access.js";
 
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
@@ -93,8 +94,18 @@ function formatActionLabel(action: string, t: Translator): string {
   return action;
 }
 
-async function getJobSnapshot(jobId: string): Promise<JobProgress | null> {
-  return jobStore.get(jobId) ?? (await loadPersistedJob(jobId));
+async function getJobSnapshot(
+  jobId: string,
+  request: Request,
+  response: Response
+): Promise<JobProgress | null> {
+  const job = jobStore.get(jobId) ?? (await loadPersistedJob(jobId));
+  if (!job || !isOAuthConfigured()) return job;
+
+  const session = await getOAuthSession(request, response);
+  if (!session || !isJobOwnedBy(job.loginName, session.userName)) return null;
+
+  return job;
 }
 
 export async function createJob(request: Request, response: Response) {
@@ -188,7 +199,7 @@ export async function createJob(request: Request, response: Response) {
 
 export async function renderJobProgress(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
-  const job = await getJobSnapshot(getRouteId(request.params.id));
+  const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;
@@ -206,7 +217,7 @@ export async function renderJobProgress(request: Request, response: Response) {
 
 export async function getJobStatus(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
-  const job = await getJobSnapshot(getRouteId(request.params.id));
+  const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
   if (!job) {
     response.status(404).json({ error: t("error.jobNotFound") });
     return;
@@ -217,7 +228,7 @@ export async function getJobStatus(request: Request, response: Response) {
 
 export async function renderJobResult(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
-  const job = await getJobSnapshot(getRouteId(request.params.id));
+  const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;
@@ -249,7 +260,7 @@ export async function renderJobResult(request: Request, response: Response) {
 export async function renderPublishReview(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
   try {
-    const job = await getJobSnapshot(getRouteId(request.params.id));
+    const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
     if (!job) {
       response.status(404).send(t("error.jobNotFound"));
       return;
@@ -296,7 +307,7 @@ export async function renderPublishReview(request: Request, response: Response) 
 export async function renderMaintenanceReview(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
   try {
-    const job = await getJobSnapshot(getRouteId(request.params.id));
+    const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
     if (!job) {
       response.status(404).send(t("error.jobNotFound"));
       return;
@@ -352,7 +363,7 @@ export async function renderMaintenanceReview(request: Request, response: Respon
 
 export async function publishMaintenanceOutputs(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
-  const job = await getJobSnapshot(getRouteId(request.params.id));
+  const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;
@@ -433,7 +444,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
 
 export async function publishJobOutputs(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
-  const job = await getJobSnapshot(getRouteId(request.params.id));
+  const job = await getJobSnapshot(getRouteId(request.params.id), request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;
@@ -493,7 +504,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
 export async function renderArtifactPreview(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
   const jobId = getRouteId(request.params.id);
-  const job = await getJobSnapshot(jobId);
+  const job = await getJobSnapshot(jobId, request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;
@@ -529,7 +540,7 @@ export async function renderArtifactPreview(request: Request, response: Response
 export async function downloadArtifact(request: Request, response: Response) {
   const t = createTranslator(getRequestLocale(request));
   const jobId = getRouteId(request.params.id);
-  const job = await getJobSnapshot(jobId);
+  const job = await getJobSnapshot(jobId, request, response);
   if (!job) {
     response.status(404).send(t("error.jobNotFound"));
     return;

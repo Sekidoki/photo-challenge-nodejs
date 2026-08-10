@@ -148,6 +148,8 @@ output/jobs/<job-id>/
 
 `src/infra/job-history.ts` rebuilds past jobs from `logs/job.log`. Changes to log fields must consider compatibility with old jobs.
 
+In OAuth mode, `JobProgress.loginName` is also the job owner. Dashboard history is filtered to that owner, and every job detail, status, artifact, review, and publish controller verifies the current OAuth user against it. A missing owner or a mismatch is handled as a missing job so job IDs and metadata are not disclosed across maintainers. Local BotPassword mode remains single-user and does not apply this filter.
+
 `src/infra/job-retention.ts` removes direct child job directories whose last-modified time is more than 30 days old. Cleanup runs before the Web server starts and repeats every 24 hours. Missing output roots and individual removal failures do not prevent the application from starting.
 
 Maintenance publish history is stored in `generated/maintenance_publish_history.json` and is written by `publish-service.ts` through `recordMaintenancePublish`. New records also include the operator and OAuth consumer. `operational-events.ts` emits structured login failures, refresh failures, publish failures, audit-write failures, and job duration events for Toolforge log monitoring.

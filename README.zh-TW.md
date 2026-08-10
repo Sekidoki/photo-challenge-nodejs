@@ -78,6 +78,7 @@ Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間
 - 已保存的登入資訊優先走系統 keychain，若不可用則退回本次程式執行期間的記憶體保存
 - OAuth 模式的 job 與 publish 使用目前登入維護者的短期 OAuth token；BotPassword 僅能在明確的本機模式使用
 - job history 會從 `output/jobs/*/logs/job.log` 重建
+- OAuth 模式下，job history、進度、結果、artifact 與 publish 操作只允許建立該 job 的操作者存取；其他維護者會收到找不到 job 的回應
 - Web 啟動時及之後每 24 小時會檢查 job 目錄；最後修改時間超過 30 天的 `output/jobs/<job-id>/` 會自動刪除
 
 ## 驗證與排錯

@@ -66,7 +66,10 @@ export async function loadPersistedJob(jobId: string): Promise<JobProgress | nul
   }
 }
 
-export async function listPersistedJobs(limit = 3): Promise<JobProgress[]> {
+export async function listPersistedJobs(
+  limit = 3,
+  filter: (job: JobProgress) => boolean = () => true
+): Promise<JobProgress[]> {
   let entries: string[] = [];
 
   try {
@@ -78,6 +81,7 @@ export async function listPersistedJobs(limit = 3): Promise<JobProgress[]> {
   const jobs = await Promise.all(entries.map((entry) => loadPersistedJob(entry)));
   return jobs
     .filter((job): job is JobProgress => job !== null)
+    .filter(filter)
     .sort((left, right) => (right.finishedAt?.getTime() ?? 0) - (left.finishedAt?.getTime() ?? 0))
     .slice(0, limit);
 }

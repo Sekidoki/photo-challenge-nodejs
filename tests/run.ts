@@ -12,6 +12,7 @@ import "./renderers/renderers.test.js";
 import "./renderers/voting-index.test.js";
 import "./web/maintenance-review.test.js";
 import "./web/i18n.test.js";
+import "./web/job-access.test.js";
 import "./web/oauth-session.test.js";
 import "./web/oauth-http.test.js";
 import "./web/publish-review.test.js";

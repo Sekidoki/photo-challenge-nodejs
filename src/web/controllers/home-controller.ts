@@ -5,6 +5,7 @@ import { listPersistedJobs } from "../../infra/job-history.js";
 import { jobStore } from "../../infra/job-store.js";
 import { getOAuthConfigurationMessage, getOAuthSession, isOAuthConfigured } from "../oauth-session.js";
 import { createTranslator, getRequestLocale, type SupportedLocale, type Translator } from "../i18n.js";
+import { isJobOwnedBy } from "../job-access.js";
 
 type HomeDefaults = {
   name: string;
@@ -71,7 +72,9 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
   const savedName = await getSavedName();
   const credentialStore = getCredentialStoreStatus();
   const oauthConfigured = isOAuthConfigured();
-  const recentJobs = oauthConfigured && !options.oauthUserName ? [] : await getRecentJobs(locale, t);
+  const recentJobs = oauthConfigured && !options.oauthUserName
+    ? []
+    : await getRecentJobs(locale, t, oauthConfigured ? options.oauthUserName ?? undefined : undefined);
 
   return {
     title: t("app.runner"),
@@ -103,8 +106,13 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
   };
 }
 
-async function getRecentJobs(locale: SupportedLocale, t: Translator): Promise<HomeRecentJob[]> {
-  const inMemoryJobs = jobStore.listByStatus().slice().reverse().map((job) => ({
+async function getRecentJobs(
+  locale: SupportedLocale,
+  t: Translator,
+  ownerUserName?: string
+): Promise<HomeRecentJob[]> {
+  const isOwnedByCurrentUser = (loginName: string) => !ownerUserName || isJobOwnedBy(loginName, ownerUserName);
+  const inMemoryJobs = jobStore.listByStatus().filter((job) => isOwnedByCurrentUser(job.loginName)).slice().reverse().map((job) => ({
     id: job.id,
     action: formatActionLabel(job.action, t),
     challenge: job.challenge,
@@ -119,7 +127,7 @@ async function getRecentJobs(locale: SupportedLocale, t: Translator): Promise<Ho
     finishedAt: job.finishedAt?.getTime() ?? 0
   }));
 
-  const persistedJobs = (await listPersistedJobs(10)).map((job) => ({
+  const persistedJobs = (await listPersistedJobs(10, (job) => isOwnedByCurrentUser(job.loginName))).map((job) => ({
     id: job.id,
     action: formatActionLabel(job.action, t),
     challenge: job.challenge,
