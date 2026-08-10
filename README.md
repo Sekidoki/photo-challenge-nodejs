@@ -45,6 +45,8 @@ npm run build
 npm start
 ```
 
+Toolforge Build Service uses the root `Procfile` to run the same `npm start` entry point.
+
 ## Usage Overview
 
 ### 1. Prepare voting page

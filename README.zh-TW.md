@@ -46,6 +46,8 @@ npm run build
 npm start
 ```
 
+Toolforge Build Service 使用根目錄的 `Procfile` 執行同一個 `npm start` 入口。
+
 ## 使用概覽
 
 ### 1. Prepare voting page
