@@ -249,11 +249,66 @@ async function requestProfile(fetchImpl: typeof fetch, accessToken: string) {
       "User-Agent": config.userAgent
     }
   });
-  const payload = await readJson<{ username?: unknown }>(response);
-  if (!response.ok || typeof payload.username !== "string" || !payload.username.trim()) {
-    throw new Error("Wikimedia OAuth did not return a valid user profile.");
+  const payload = await readJson<{ username?: unknown; error?: unknown }>(response);
+  if (response.ok && typeof payload.username === "string" && payload.username.trim()) {
+    return { userName: payload.username.trim() };
   }
-  return { userName: payload.username.trim() };
+
+  return requestCommonsUserInfo(
+    fetchImpl,
+    accessToken,
+    describeResourceFailure(response, payload, "missing username")
+  );
+}
+
+async function requestCommonsUserInfo(
+  fetchImpl: typeof fetch,
+  accessToken: string,
+  metaFailure: string
+) {
+  const url = new URL(config.commonsApiUrl);
+  url.searchParams.set("action", "query");
+  url.searchParams.set("meta", "userinfo");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("formatversion", "2");
+  const response = await fetchImpl(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "User-Agent": config.userAgent
+    }
+  });
+  const payload = await readJson<{
+    error?: { code?: unknown };
+    query?: { userinfo?: { name?: unknown; anon?: unknown } };
+  }>(response);
+  const userInfo = payload.query?.userinfo;
+  if (
+    !response.ok
+    || !userInfo
+    || userInfo.anon !== undefined
+    || typeof userInfo.name !== "string"
+    || !userInfo.name.trim()
+  ) {
+    const commonsReason = userInfo?.anon !== undefined
+      ? "anonymous user"
+      : describeResourceFailure(response, payload.error, "missing userinfo name");
+    throw new Error(
+      `Wikimedia OAuth could not identify the signed-in user (Meta: ${metaFailure}; Commons: ${commonsReason}).`
+    );
+  }
+  return { userName: userInfo.name.trim() };
+}
+
+function describeResourceFailure(
+  response: globalThis.Response,
+  payload: { error?: unknown; code?: unknown } | undefined,
+  fallback: string
+): string {
+  const rawCode = payload?.error ?? payload?.code;
+  const code = typeof rawCode === "string" && /^[a-zA-Z0-9_.-]{1,80}$/.test(rawCode)
+    ? rawCode
+    : fallback;
+  return `HTTP ${response.status} ${code}`;
 }
 
 async function readJson<T>(response: globalThis.Response): Promise<T> {

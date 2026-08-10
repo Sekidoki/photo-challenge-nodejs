@@ -77,7 +77,13 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
           expires_in: 3600
         }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
-      return new globalThis.Response(JSON.stringify({ username: "Sekidoki" }), {
+      if (url.includes("/resource/profile")) {
+        return new globalThis.Response(JSON.stringify({ error: "invalid_access_token" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new globalThis.Response(JSON.stringify({ query: { userinfo: { name: "Sekidoki" } } }), {
         status: 200,
         headers: { "Content-Type": "application/json" }
       });
@@ -88,6 +94,8 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
     assert.equal(returnTo, "/jobs/example");
     assert.match(fetchCalls[0]?.body ?? "", /code_verifier=/);
     assert.equal(fetchCalls[1]?.authorization, "Bearer oauth-access-secret");
+    assert.equal(fetchCalls[2]?.authorization, "Bearer oauth-access-secret");
+    assert.match(fetchCalls[2]?.url ?? "", /meta=userinfo/);
 
     const sessionCookie = cookies.get("photo_challenge_session") ?? "";
     assert(sessionCookie);
