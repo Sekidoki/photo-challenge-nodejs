@@ -5,6 +5,21 @@ dotenv.config();
 
 const projectRoot = process.cwd();
 const persistentDataRoot = resolvePersistentDataRoot(process.env, projectRoot);
+const hostedRuntime = process.env.NODE_ENV === "production" || Boolean(process.env.TOOL_DATA_DIR);
+
+export type WebAuthMode = "local" | "oauth";
+
+export function resolveWebAuthMode(environment: NodeJS.ProcessEnv): WebAuthMode {
+  const configuredMode = environment.WEB_AUTH_MODE?.trim().toLowerCase();
+  if (configuredMode === "local" || configuredMode === "oauth") return configuredMode;
+  if (configuredMode) {
+    throw new Error('WEB_AUTH_MODE must be either "local" or "oauth".');
+  }
+
+  return environment.NODE_ENV === "production" || Boolean(environment.TOOL_DATA_DIR)
+    ? "oauth"
+    : "local";
+}
 
 export function resolvePersistentDataRoot(
   environment: { PHOTO_CHALLENGE_DATA_ROOT?: string; TOOL_DATA_DIR?: string },
@@ -23,6 +38,8 @@ const oauthSessionSecret = process.env.WEB_SESSION_SECRET?.trim() ?? "";
 
 export const config = {
   port: Number(process.env.PORT ?? 3000),
+  webAuthMode: resolveWebAuthMode(process.env),
+  hostedRuntime,
   projectRoot,
   outputRoot: path.join(persistentDataRoot, "output", "jobs"),
   commonsApiUrl: process.env.COMMONS_API_URL ?? "https://commons.wikimedia.org/w/api.php",
@@ -56,3 +73,18 @@ export const config = {
     )
   }
 };
+
+export function assertWebAuthConfiguration(): void {
+  if (config.webAuthMode === "local") {
+    if (config.hostedRuntime) {
+      throw new Error("WEB_AUTH_MODE=local is restricted to local development and cannot run on Toolforge or in production.");
+    }
+    return;
+  }
+  if (!config.oauth.configured) {
+    throw new Error(
+      "WEB_AUTH_MODE=oauth requires WIKIMEDIA_OAUTH_CLIENT_ID, WIKIMEDIA_OAUTH_CLIENT_SECRET, "
+      + "WIKIMEDIA_OAUTH_CALLBACK_URL, and a WEB_SESSION_SECRET of at least 32 characters."
+    );
+  }
+}

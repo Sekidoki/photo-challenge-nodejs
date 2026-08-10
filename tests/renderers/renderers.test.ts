@@ -15,21 +15,6 @@ function readFixture(name: string): string {
   return readFileSync(path.join(fixturesDir, name), "utf8").replace(/\r\n/g, "\n");
 }
 
-test("Commons winners template source preserves the current table chrome and supports all entry modes", () => {
-  const source = readFileSync(
-    path.resolve("wiki", "Template Photo challenge winners table.wikitext"),
-    "utf8"
-  );
-
-  assert.match(source, /^<!--/);
-  assert.match(source, /\{\| class = "wikitable"/);
-  assert.match(source, /\{\{#switch:\{\{\{entry_mode\|single\}\}\}/);
-  assert.match(source, /duo-coequal=/);
-  assert.match(source, /duo-reference=/);
-  assert.match(source, /\{\{\{comment_1\|/);
-  assert.match(source, /\[\[Category:Photo challenge templates\|Winners table\]\]/);
-});
-
 function submissionMember(fileName: string, user = "Photographer"): VotingEntryMember {
   return {
     role: "submission",

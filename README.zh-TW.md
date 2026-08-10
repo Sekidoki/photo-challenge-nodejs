@@ -3,7 +3,8 @@
 [English](README.md) | 繁體中文
 
 這是一個用於 Wikimedia Commons Photo Challenge 作業流程的 Node.js + TypeScript 專案。
-它同時提供 Web UI 與 CLI，處理三種常見工作：
+它提供 Web UI 處理三種常見工作：
+
 - 從 submission pages 產生 voting page
 - 驗票並產生 revised/result/winners 頁面
 - 規劃與發佈 post-results maintenance 項目
@@ -12,15 +13,17 @@
 
 - Node.js `26.7.0`
 - npm `12`
-- CLI 使用 Wikimedia Commons BotPassword；共享 Web 部署則使用 Wikimedia OAuth 2 client
+- 本機 Web 開發可使用 Wikimedia Commons BotPassword；此模式只監聽 `127.0.0.1`，正式部署必須使用 Wikimedia OAuth 2 client
 
-基本設定：
+本機開發設定：
+
 - 將 `.env.example` 複製為 `.env`
+- 設定 `WEB_AUTH_MODE=local`
 - `NAME` 填入完整 BotPassword 登入名稱，例如 `MainAccount@BotAppName`
 - 設定 `BOT_PASSWORD`
 - 視需要設定 `USER_AGENT`、`PORT`、`CREDENTIAL_SERVICE_NAME`
 
-共享 Web 部署時，請在 Meta-Wiki 註冊 confidential OAuth 2 application，callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；`Sekidoki` 是受保護的擁有者。
+共享 Web 部署時，設定 `WEB_AUTH_MODE=oauth`，並在 Meta-Wiki 註冊 confidential OAuth 2 application。Callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。OAuth 模式缺少任一必要設定時，服務會拒絕啟動，不會退回 BotPassword。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；`Sekidoki` 是受保護的擁有者。
 
 ## 安裝
 
@@ -43,15 +46,6 @@ npm run build
 npm start
 ```
 
-CLI 範例：
-
-```bash
-npm run cli -- create-voting --challenge "2026 - March - Three-wheelers"
-npm run cli -- count-votes-and-select-winners --challenge "2026 - February - Orange"
-node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange" --paired-challenge "2026 - February - First aid" --publish-mode dry-run
-node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange" --publish-mode live
-```
-
 ## 使用概覽
 
 ### 1. Prepare voting page
@@ -59,9 +53,9 @@ node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange"
 適用於投票開始前。
 產物會寫到 `output/jobs/<job-id>/generated/`，包含 `*_voting.txt`、`*_files.json`、`*_challenge-config.json`、`*_summary.txt`。
 
-預設為單圖、單月挑戰。雙圖像挑戰可使用 `--entry-mode duo-coequal` 或 `--entry-mode duo-reference`。只有社群確認採用例外時長時，才覆寫 `--submission-start` 與 `--submission-end`；雙圖像模式本身不會自動延長投稿期間。
+預設為單圖、單月挑戰。雙圖像挑戰與例外投稿期間可在 Web 表單中設定；雙圖像模式本身不會自動延長投稿期間。
 
-三種投稿模式的得獎頁都使用 `{{Photo challenge winners table}}`。發布雙圖得獎結果前，請先將[專案內附的 Commons 模板原始碼](wiki/Template%20Photo%20challenge%20winners%20table.wikitext)部署到 Commons 模板；既有單圖參數仍然向後相容。
+三種投稿模式的得獎頁都使用 Commons 上已更新的 `{{Photo challenge winners table}}`；既有單圖參數仍然向後相容。
 
 ### 2. Count votes and select winners
 
@@ -80,9 +74,9 @@ Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間
 - `post-results-maintenance` 已支援 `dry-run`、`sandbox`、`live`，可正式發佈得獎通知、central announcement、Previous-page update 與檔案頁模板
 - `sandbox` 目標頁會依 `NAME` 中 `@` 前的主帳號名稱自動推導
 - 已保存的登入資訊優先走系統 keychain，若不可用則退回本次程式執行期間的記憶體保存
-- 啟用 OAuth 後，Web job 與 publish 使用目前登入維護者的短期 OAuth token；CLI 仍維持 BotPassword
+- OAuth 模式的 job 與 publish 使用目前登入維護者的短期 OAuth token；BotPassword 僅能在明確的本機模式使用
 - job history 會從 `output/jobs/*/logs/job.log` 重建
-- Web 啟動時及之後每 24 小時會檢查 job 目錄，CLI 啟動時也會檢查；最後修改時間超過 30 天的 `output/jobs/<job-id>/` 會自動刪除
+- Web 啟動時及之後每 24 小時會檢查 job 目錄；最後修改時間超過 30 天的 `output/jobs/<job-id>/` 會自動刪除
 
 ## 驗證與排錯
 
@@ -105,10 +99,9 @@ npm test
 
 目前已完成並可使用：
 - Web UI：job 建立、進度追蹤、artifact preview、publish review、maintenance review
-- CLI：主要 workflow 與 list/archive/voting-index helper commands
 - Commons 寫入：voting/result/winners 頁面發佈
 - 後續維護：得獎通知、central announcement、Previous-page update 與檔案頁模板都可正式發佈，且 publish history 會持久化保存
-- parser、renderer、CLI、job history、offline workflow fixtures 的 regression tests
+- parser、renderer、Web、job history、offline workflow fixtures 的 regression tests
 
 維護者文件：
 - 正式架構與責任邊界：[docs/architecture.zh-TW.md](docs/architecture.zh-TW.md)

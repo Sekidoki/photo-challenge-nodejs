@@ -6,7 +6,7 @@ This is the formal architecture document for Photo Challenge Node.js. It defines
 
 ## 1. System Purpose
 
-Photo Challenge Node.js supports recurring Wikimedia Commons Photo Challenge operations. It provides both a Web UI and a CLI for these jobs:
+Photo Challenge Node.js supports recurring Wikimedia Commons Photo Challenge operations through a Web UI:
 
 - Generate voting pages from submission pages.
 - Count and validate votes, then generate revised voting, result, and winners pages.
@@ -18,7 +18,7 @@ The primary architecture rule is to preserve Commons wikitext output behavior. P
 
 The main directory responsibilities are:
 
-- `src/core/`: shared types, workflow action metadata, and request validation helpers used by Web, CLI, and workflows. This layer must not depend on Web, Commons bot, or filesystem output concerns.
+- `src/core/`: shared types, workflow action metadata, and request validation helpers used by Web and workflows. This layer must not depend on Web, Commons bot, or filesystem output concerns.
 - `src/parsers/`: parses Commons wikitext, submission pages, voting pages, and challenge indexes. This layer should remain pure data transformation: no file writes and no Commons API calls.
 - `src/renderers/`: renders voting, revised voting, result, winners, and voting index wikitext. Output format is protected by regression tests.
 - `src/workflows/`: workflow orchestration, artifact persistence, publish target resolution, post-results maintenance plans, and publish services.
@@ -29,16 +29,11 @@ The main directory responsibilities are:
 
 ## 3. Entry Points and Data Flow
 
-The system has two main entry points:
-
-- CLI: `src/cli/index.ts`
-- Web: `src/web/app.ts` and `src/web/controllers/*`
-
-Both entry points should use shared validation and action metadata from `src/core/job-actions.ts`. `JobRequest.action` is the workflow discriminator. When a workflow action is added or removed, update core metadata, CLI parsing, Web form/view models, and tests together.
+The sole entry point is the Web application in `src/web/app.ts` and `src/web/controllers/*`. It uses shared validation and action metadata from `src/core/job-actions.ts`. `JobRequest.action` is the workflow discriminator. When a workflow action is added or removed, update core metadata, Web form/view models, and tests together.
 
 Typical data flow:
 
-1. CLI or Web creates a `JobRequest`.
+1. Web creates a `JobRequest`.
 2. `runJob(jobId, request)` creates output paths, checks publish policy, and creates a Commons bot session.
 3. `runJob` dispatches to the matching workflow handler.
 4. The workflow reads source pages, calls parsers/renderers, and writes generated artifacts.
@@ -76,22 +71,22 @@ When adding a workflow, prefer a new independent handler. `run-job.ts` should on
 
 ## 5. Publish Architecture
 
-`src/workflows/publish-service.ts` centralizes shared behavior between Web manual publishing and CLI automatic publishing:
+`src/workflows/publish-service.ts` centralizes Web publishing behavior:
 
 - `readExistingPageContent`: reads current page content; missing pages return `null`.
 - `publishStandardPages`: publishes voting, result, and winners pages.
 - `publishMaintenanceEditPlans`: publishes maintenance edit plans, including live no-op skips, history records, and publish counts.
 
-For standard publish, workflow helpers and Web review services decide how generated artifacts map to target titles. Actual save behavior should go through the publish service so Web routes and CLI workflows do not diverge.
+For standard publish, workflow helpers and Web review services decide how generated artifacts map to target titles. Actual save behavior should go through the publish service.
 
 Maintenance publish is driven by maintenance plan JSON. `src/workflows/maintenance-publish.ts` is responsible for:
 
 - `parseMaintenancePlanResult`: runtime schema guard with explicit success/failure results.
-- `buildMaintenancePublishEntries`: compatibility entry point; invalid plans throw clear errors, so CLI automatic publish fails fast.
+- `buildMaintenancePublishEntries`: internal workflow compatibility entry point; invalid plans throw clear errors.
 - `buildMaintenancePublishEntriesFromPlan`: converts a validated plan into publish entries.
 - `applyMaintenancePublishEntry`: applies one maintenance entry to current page content and returns the next wikitext.
 
-Web manual publish uses `parseMaintenancePlanResult` to display warnings/notices, then calls `buildMaintenancePublishEntriesFromPlan`. CLI automatic publish calls `buildMaintenancePublishEntries` directly.
+Web publish uses `parseMaintenancePlanResult` to display warnings/notices, then calls `buildMaintenancePublishEntriesFromPlan`.
 
 ## 6. Web Architecture
 
@@ -124,11 +119,11 @@ The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `s
 
 Maintainer authorization is fail-closed and persisted at `output/config/maintainers.json`. `Sekidoki` is the protected owner and cannot be changed through the Web UI. The owner can grant or revoke list-manager and regular-maintainer roles. List managers can add or remove regular maintainers but cannot alter the owner or another list manager. Role membership is rechecked on every authenticated request, so removal invalidates an existing session on its next request. Emergency owner replacement requires an explicit code and deployment change.
 
-OAuth and BotPassword deliberately coexist at different entry points:
+`WEB_AUTH_MODE` explicitly separates authentication modes:
 
-- Web uses the signed-in maintainer's Wikimedia identity whenever OAuth is configured.
-- CLI continues to use `NAME` and `BOT_PASSWORD`.
-- Local Web development can fall back to the existing BotPassword form when OAuth is not configured.
+- `oauth` is required for Toolforge and other production deployments. Web always uses the signed-in maintainer's Wikimedia identity, and the service refuses to start if required OAuth settings are incomplete.
+- `local` is only for a developer workstation using the existing BotPassword form, and the server binds only to `127.0.0.1`; an explicit local setting on Toolforge or in production is rejected at startup.
+- When `NODE_ENV=production` or `TOOL_DATA_DIR` is present, an omitted mode safely defaults to `oauth` and never falls back to BotPassword.
 
 The in-memory OAuth session store assumes one Toolforge Web replica. Moving to multiple replicas requires a shared encrypted session store before increasing the replica count.
 
@@ -153,7 +148,7 @@ output/jobs/<job-id>/
 
 `src/infra/job-history.ts` rebuilds past jobs from `logs/job.log`. Changes to log fields must consider compatibility with old jobs.
 
-`src/infra/job-retention.ts` removes direct child job directories whose last-modified time is more than 30 days old. Cleanup runs before the Web server or CLI starts and repeats every 24 hours in the Web process. Missing output roots and individual removal failures do not prevent the application from starting.
+`src/infra/job-retention.ts` removes direct child job directories whose last-modified time is more than 30 days old. Cleanup runs before the Web server starts and repeats every 24 hours. Missing output roots and individual removal failures do not prevent the application from starting.
 
 Maintenance publish history is stored in `generated/maintenance_publish_history.json` and is written by `publish-service.ts` through `recordMaintenancePublish`. New records also include the operator and OAuth consumer. `operational-events.ts` emits structured login failures, refresh failures, publish failures, audit-write failures, and job duration events for Toolforge log monitoring.
 
@@ -161,9 +156,9 @@ On Toolforge, `config.ts` uses `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/j
 
 ## 8. Action and Naming Policy
 
-The current vote-counting action for new jobs is `count-votes-and-select-winners`. The legacy `process-challenge` action is retained only for persisted job and artifact compatibility; it should not appear in new UI or CLI commands.
+The current vote-counting action for new jobs is `count-votes-and-select-winners`. The legacy `process-challenge` action is retained only for persisted job and artifact compatibility; it should not appear in the UI.
 
-Shared validation for actions, modes, sources, and entry modes lives in `src/core/job-actions.ts`. Web and CLI should both use this layer to avoid different fallback behavior across entry points.
+Shared validation for actions, modes, sources, and entry modes lives in `src/core/job-actions.ts` for Web and workflow use.
 
 Public types and cross-module functions should avoid overly generic names. New APIs should prefer domain-specific names such as `PublishReviewEntry`, `MaintenancePublishEntry`, `ArtifactEntry`, and `SourcePageSpec`.
 
@@ -216,6 +211,7 @@ Before deployment, run `npm ci`, `npm run check`, `npm run check:test`, `npm tes
 Create production settings interactively so secret values do not appear in shell history or process arguments:
 
 ```bash
+toolforge envvars create WEB_AUTH_MODE
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
 toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL

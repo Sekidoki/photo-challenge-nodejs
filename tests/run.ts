@@ -1,6 +1,4 @@
 import "./services/commons-bot.test.js";
-import "./cli/cli.test.js";
-import "./cli/post-results-cli.test.js";
 import "./core/job-actions.test.js";
 import "./core/submission-entries.test.js";
 import "./core/validation-scoring.test.js";

@@ -42,11 +42,14 @@ const pendingLogins = new Map<string, PendingLogin>();
 const sessions = new Map<string, StoredOAuthSession>();
 
 export function isOAuthConfigured(): boolean {
-  return config.oauth.configured;
+  return config.webAuthMode === "oauth" && config.oauth.configured;
 }
 
 export function getOAuthConfigurationMessage(): string | null {
-  if (config.oauth.configured) {
+  if (config.webAuthMode === "local") {
+    return null;
+  }
+  if (isOAuthConfigured()) {
     return null;
   }
 
@@ -131,7 +134,7 @@ export async function getOAuthSession(
   response?: Response,
   fetchImpl: typeof fetch = fetch
 ): Promise<OAuthSession | null> {
-  if (!config.oauth.configured) {
+  if (!isOAuthConfigured()) {
     return null;
   }
 
@@ -203,6 +206,9 @@ export function validateCsrfToken(session: OAuthSession, submittedToken: unknown
 }
 
 function assertOAuthConfigured(): void {
+  if (config.webAuthMode !== "oauth") {
+    throw new Error("Wikimedia OAuth is disabled because WEB_AUTH_MODE=local.");
+  }
   const message = getOAuthConfigurationMessage();
   if (message) throw new Error(message);
 }

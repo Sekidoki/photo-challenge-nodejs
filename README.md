@@ -3,7 +3,8 @@
 English | [繁體中文](README.zh-TW.md)
 
 A Node.js + TypeScript application for Wikimedia Commons Photo Challenge operations.
-It provides a Web UI and CLI for three common workflows:
+It provides a Web UI for three common workflows:
+
 - prepare voting pages from submission pages
 - process votes and generate revised/result/winners pages
 - plan and publish post-results maintenance tasks
@@ -12,15 +13,16 @@ It provides a Web UI and CLI for three common workflows:
 
 - Node.js `26.7.0`
 - npm `12`
-- A Wikimedia Commons BotPassword login for the CLI, or a Wikimedia OAuth 2 client for a deployed Web UI
+- A Wikimedia Commons BotPassword for local Web development (bound to `127.0.0.1` only), or a Wikimedia OAuth 2 client for a deployed Web UI
 
 Setup details:
 - copy `.env.example` to `.env`
+- set `WEB_AUTH_MODE=local`
 - set `NAME` to your full BotPassword login such as `MainAccount@BotAppName`
 - set `BOT_PASSWORD`
 - optional: set `USER_AGENT`, `PORT`, and `CREDENTIAL_SERVICE_NAME`
 
-For a shared Web deployment, register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`, then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. Maintainer access is fail-closed and managed from `/maintainers`; `Sekidoki` is the protected owner.
+For a shared Web deployment, set `WEB_AUTH_MODE=oauth` and register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`. Then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. OAuth mode refuses to start when any required setting is missing and never falls back to BotPassword. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. Maintainer access is fail-closed and managed from `/maintainers`; `Sekidoki` is the protected owner.
 
 ## Install
 
@@ -43,15 +45,6 @@ npm run build
 npm start
 ```
 
-CLI examples:
-
-```bash
-npm run cli -- create-voting --challenge "2026 - March - Three-wheelers"
-npm run cli -- count-votes-and-select-winners --challenge "2026 - February - Orange"
-node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange" --paired-challenge "2026 - February - First aid" --publish-mode dry-run
-node dist/cli.js post-results-maintenance --challenge "2026 - February - Orange" --publish-mode live
-```
-
 ## Usage Overview
 
 ### 1. Prepare voting page
@@ -61,7 +54,7 @@ Outputs are written under `output/jobs/<job-id>/generated/`, including `*_voting
 
 The default is a single-image, single-month challenge. For paired-image challenges, use `--entry-mode duo-coequal` or `--entry-mode duo-reference`. Only override `--submission-start` and `--submission-end` when the community has approved an exceptional duration; paired-image mode does not automatically extend the submission window.
 
-Winner pages for all three entry modes use `{{Photo challenge winners table}}`. Before publishing paired-image winners, deploy [the bundled Commons template source](wiki/Template%20Photo%20challenge%20winners%20table.wikitext) to the Commons template; the existing single-image parameters remain backward compatible.
+Winner pages for all three entry modes use the updated `{{Photo challenge winners table}}` on Commons; the existing single-image parameters remain backward compatible.
 
 ### 2. Count votes and select winners
 
@@ -80,9 +73,9 @@ It creates winner notifications, challenge announcements, Previous-page updates,
 - `post-results-maintenance` supports `dry-run`, `sandbox`, and `live` for winner notifications, central announcements, Previous-page updates, and file assessment templates
 - sandbox targets are derived from the main account part before `@` in `NAME`
 - saved credentials use the system keychain when available, with in-memory fallback for the current process
-- when OAuth is configured, Web jobs and publishes use the signed-in maintainer's short-lived OAuth token; the CLI continues to use BotPassword
+- OAuth-mode jobs and publishes use the signed-in maintainer's short-lived OAuth token; BotPassword is available only in explicit local mode
 - job history is rebuilt from `output/jobs/*/logs/job.log`
-- job directories are checked when Web or CLI starts and every 24 hours while Web is running; `output/jobs/<job-id>/` directories last modified more than 30 days ago are removed automatically
+- job directories are checked when Web starts and every 24 hours; `output/jobs/<job-id>/` directories last modified more than 30 days ago are removed automatically
 
 ## Validation and Troubleshooting
 
@@ -105,10 +98,9 @@ Notes:
 
 Implemented and working today:
 - Web UI for job creation, progress tracking, artifact preview, publish review, and maintenance review
-- CLI for main workflows plus list/archive/voting-index helper commands
 - Commons publishing for voting/result/winners pages
 - formal maintenance publishing for winner notifications, central announcements, Previous-page updates, and file assessment templates
-- regression coverage for parsers, renderers, CLI, job history, and offline workflow fixtures
+- regression coverage for parsers, renderers, Web, job history, and offline workflow fixtures
 
 Maintainer docs:
 - Architecture and responsibility boundaries: [docs/architecture.md](docs/architecture.md)

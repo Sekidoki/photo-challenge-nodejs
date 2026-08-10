@@ -6,7 +6,7 @@
 
 ## 1. 系統目的
 
-Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行作業。系統同時提供 Web UI 與 CLI，涵蓋下列工作：
+Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行作業。系統以 Web UI 涵蓋下列工作：
 
 - 從 submission pages 產生 voting page。
 - 計票、驗票，並產生 revised voting、result、winners 頁面。
@@ -18,7 +18,7 @@ Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行
 
 主要目錄責任如下：
 
-- `src/core/`：跨 Web、CLI、workflow 共用的型別、workflow action metadata 與 request validation helper。這層不依賴 Web、Commons bot 或檔案輸出。
+- `src/core/`：Web 與 workflow 共用的型別、workflow action metadata 與 request validation helper。這層不依賴 Web、Commons bot 或檔案輸出。
 - `src/parsers/`：解析 Commons wikitext、submission pages、voting pages 與 challenge index。這層保持純資料轉換，不寫檔、不呼叫 Commons API。
 - `src/renderers/`：產生 voting、revised voting、result、winners、voting index 等 wikitext。輸出格式由 regression tests 保護。
 - `src/workflows/`：工作流程 orchestration、artifact persistence、publish target resolution、post-results maintenance plan、publish service。
@@ -29,16 +29,11 @@ Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行
 
 ## 3. 入口與資料流
 
-系統有兩個主要入口：
-
-- CLI：`src/cli/index.ts`
-- Web：`src/web/app.ts` 與 `src/web/controllers/*`
-
-兩個入口都應使用 `src/core/job-actions.ts` 的共用 validation 與 action metadata。`JobRequest.action` 是 workflow discriminator，新增或移除 workflow action 時，必須同步更新 core metadata、CLI parsing、Web form/view model 與 tests。
+系統的唯一入口是 `src/web/app.ts` 與 `src/web/controllers/*`。Web 應使用 `src/core/job-actions.ts` 的共用 validation 與 action metadata。`JobRequest.action` 是 workflow discriminator，新增或移除 workflow action 時，必須同步更新 core metadata、Web form/view model 與 tests。
 
 典型資料流：
 
-1. CLI 或 Web 建立 `JobRequest`。
+1. Web 建立 `JobRequest`。
 2. `runJob(jobId, request)` 建立 output paths、檢查 publish policy、建立 Commons bot session。
 3. `runJob` dispatch 到對應 workflow handler。
 4. Workflow 讀取來源頁、呼叫 parser/renderer、寫入 generated artifacts。
@@ -76,22 +71,22 @@ Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行
 
 ## 5. Publish 架構
 
-`src/workflows/publish-service.ts` 集中 Web manual publish 與 CLI automatic publish 的共同行為：
+`src/workflows/publish-service.ts` 集中 Web publish 的共同行為：
 
 - `readExistingPageContent`：讀取現有頁面，缺頁回傳 `null`。
 - `publishStandardPages`：發布 voting、result、winners 類頁面。
 - `publishMaintenanceEditPlans`：發布 maintenance edit plans，包含 live no-op skip、history record 與 publish counts。
 
-Standard publish 的「generated artifact 如何對應 target title」由 workflow helper 與 Web review service 決定。實際保存行為應走 publish service，避免 Web route 與 CLI workflow 各自實作不同 publish 規則。
+Standard publish 的「generated artifact 如何對應 target title」由 workflow helper 與 Web review service 決定。實際保存行為應統一走 publish service。
 
 Maintenance publish 的資料來源是 maintenance plan JSON。`src/workflows/maintenance-publish.ts` 負責：
 
 - `parseMaintenancePlanResult`：runtime schema guard，回傳明確成功/失敗結果。
-- `buildMaintenancePublishEntries`：compatibility entry point；遇到 invalid plan 會丟出明確錯誤，CLI automatic publish 會 fail fast。
+- `buildMaintenancePublishEntries`：保留給內部 workflow 相容性的 entry point；遇到 invalid plan 會丟出明確錯誤。
 - `buildMaintenancePublishEntriesFromPlan`：從已驗證 plan 轉成 publish entries。
 - `applyMaintenancePublishEntry`：把單一 maintenance entry 套用到目前頁面內容，產生下一版 wikitext。
 
-Web manual publish 先用 `parseMaintenancePlanResult` 顯示 warning/notice，再使用 `buildMaintenancePublishEntriesFromPlan`。CLI automatic publish 直接使用 `buildMaintenancePublishEntries`。
+Web publish 先用 `parseMaintenancePlanResult` 顯示 warning/notice，再使用 `buildMaintenancePublishEntriesFromPlan`。
 
 ## 6. Web 架構
 
@@ -121,11 +116,11 @@ Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解�
 
 維護者授權採 fail-closed，並持久保存於 `output/config/maintainers.json`。`Sekidoki` 是受保護的擁有者，不能透過 Web UI 變更。擁有者可以授予或撤銷名單管理員及一般維護者；名單管理員只能新增或移除一般維護者，不能變更擁有者或其他名單管理員。每個已驗證請求都會重新檢查角色，因此移除權限後，既有 session 會在下一次請求失效。緊急替換擁有者必須明確修改程式並重新部署。
 
-OAuth 與 BotPassword 刻意分別服務不同入口：
+`WEB_AUTH_MODE` 明確區隔驗證模式：
 
-- 啟用 OAuth 時，Web 一律使用目前登入維護者的 Wikimedia 身分。
-- CLI 繼續使用 `NAME` 與 `BOT_PASSWORD`。
-- 本機 Web 若未設定 OAuth，仍可使用既有 BotPassword 表單。
+- `oauth` 用於 Toolforge 與其他正式部署，Web 一律使用目前登入維護者的 Wikimedia 身分；必要 OAuth 設定不完整時服務拒絕啟動。
+- `local` 僅供開發者工作站使用既有 BotPassword 表單，server 只監聽 `127.0.0.1`；Toolforge 或 production 明確誤設為此模式也會拒絕啟動。
+- `NODE_ENV=production` 或存在 `TOOL_DATA_DIR` 時，未明確設定也會安全地預設為 `oauth`，不會退回 BotPassword。
 
 目前 OAuth session store 位於記憶體，因此 Toolforge Web service 應維持單一 replica。若將來要擴為多 replica，必須先加入共享且加密的 session store。
 
@@ -150,7 +145,7 @@ output/jobs/<job-id>/
 
 `src/infra/job-history.ts` 會從 `logs/job.log` 重建過去 job。修改 log 欄位時要考慮舊 job 相容性。
 
-`src/infra/job-retention.ts` 會刪除最後修改時間超過 30 天的直屬 job 目錄。Web server 或 CLI 啟動前會先清理一次，Web process 之後每 24 小時再執行；output root 不存在或個別目錄刪除失敗時，不會阻止應用程式啟動。
+`src/infra/job-retention.ts` 會刪除最後修改時間超過 30 天的直屬 job 目錄。Web server 啟動前會先清理一次，之後每 24 小時再執行；output root 不存在或個別目錄刪除失敗時，不會阻止應用程式啟動。
 
 Maintenance publish history 存在 `generated/maintenance_publish_history.json`，由 `publish-service.ts` 透過 `recordMaintenancePublish` 寫入；新紀錄也包含 operator 與 OAuth consumer。`operational-events.ts` 會輸出可供 Toolforge logs 監控的登入失敗、refresh 失敗、publish failure、audit write failure 與 job duration 事件。
 
@@ -158,9 +153,9 @@ Maintenance publish history 存在 `generated/maintenance_publish_history.json`�
 
 ## 8. Action 與命名政策
 
-新 job 的 vote-counting action 是 `count-votes-and-select-winners`。舊的 `process-challenge` 只保留給 persisted job 與 artifact compatibility，不應再出現在 UI 或 CLI 新命令中。
+新 job 的 vote-counting action 是 `count-votes-and-select-winners`。舊的 `process-challenge` 只保留給 persisted job 與 artifact compatibility，不應再出現在 UI 中。
 
-共用 action、mode、source、entry validation 放在 `src/core/job-actions.ts`。Web 與 CLI 都應使用這一層，避免同一個 mode 在不同入口有不同 fallback。
+共用 action、mode、source、entry validation 放在 `src/core/job-actions.ts`，供 Web 與 workflow 使用。
 
 公開型別與跨模組函式應避免過度泛用名稱。新增 API 時優先使用能表達 domain 的名稱，例如 `PublishReviewEntry`、`MaintenancePublishEntry`、`ArtifactEntry`、`SourcePageSpec`。
 
@@ -213,6 +208,7 @@ Toolforge deployment 屬於系統架構的一部分，因為 authentication sess
 Production 設定應以互動提示建立，避免 secret 出現在 shell history 或 process argument：
 
 ```bash
+toolforge envvars create WEB_AUTH_MODE
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_ID
 toolforge envvars create WIKIMEDIA_OAUTH_CLIENT_SECRET
 toolforge envvars create WIKIMEDIA_OAUTH_CALLBACK_URL

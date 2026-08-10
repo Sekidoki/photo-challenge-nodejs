@@ -18,6 +18,7 @@ async function withOAuthHttpServer(
   run: (baseUrl: string, calls: OAuthFetchCall[]) => Promise<void>
 ): Promise<void> {
   const previous = { ...config.oauth };
+  const previousWebAuthMode = config.webAuthMode;
   const previousRegistryPath = config.accessControl.registryPath;
   const registryDirectory = await mkdtemp(path.join(tmpdir(), "photo-challenge-http-maintainers-"));
   const calls = (oauthFetch as typeof oauthFetch & { calls?: OAuthFetchCall[] }).calls ?? [];
@@ -33,6 +34,7 @@ async function withOAuthHttpServer(
     profileUrl: "https://meta.example/oauth2/resource/profile",
     configured: true
   });
+  config.webAuthMode = "oauth";
   config.accessControl.registryPath = path.join(registryDirectory, "maintainers.json");
   globalThis.fetch = oauthFetch;
 
@@ -44,6 +46,7 @@ async function withOAuthHttpServer(
     if (server) await close(server);
     globalThis.fetch = originalFetch;
     Object.assign(config.oauth, previous);
+    config.webAuthMode = previousWebAuthMode;
     config.accessControl.registryPath = previousRegistryPath;
     await rm(registryDirectory, { recursive: true, force: true });
   }

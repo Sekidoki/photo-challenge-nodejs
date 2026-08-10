@@ -37,6 +37,8 @@ function fakeRequest(query: Record<string, string>, cookies: CookieJar): Request
 
 test("OAuth session completes Authorization Code + PKCE without exposing tokens to the cookie", async () => {
   const previous = { ...config.oauth };
+  const previousWebAuthMode = config.webAuthMode;
+  config.webAuthMode = "oauth";
   Object.assign(config.oauth, {
     clientId: "client-id",
     clientSecret: "client-secret",
@@ -105,5 +107,6 @@ test("OAuth session completes Authorization Code + PKCE without exposing tokens 
     assert.equal(await getOAuthSession(fakeRequest({}, cookies), response, fetchImpl), null);
   } finally {
     Object.assign(config.oauth, previous);
+    config.webAuthMode = previousWebAuthMode;
   }
 });

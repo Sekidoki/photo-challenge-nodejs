@@ -14,8 +14,6 @@
     "dev": "tsx watch src/server.ts",
     "dev:nodemon": "nodemon --watch src --ext ts,handlebars,css --exec tsx src/server.ts",
     "start": "node dist/server.js",
-    "cli": "npm run build --silent && node dist/cli.js",
-    "cli:dev": "tsx src/cli.ts",
     "check": "tsc --noEmit -p tsconfig.json",
     "check:test": "tsc --noEmit -p tsconfig.test.json",
     "test": "npm run build:test && node .test-dist/tests/run.js"

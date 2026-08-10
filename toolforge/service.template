@@ -1,5 +1,6 @@
 # Copy this file to the Toolforge tool account's service.template.
 type: buildservice
+# Toolforge must also define WEB_AUTH_MODE=oauth with `toolforge envvars create`.
 mount: all
 replicas: 1
 health-check-path: /healthz

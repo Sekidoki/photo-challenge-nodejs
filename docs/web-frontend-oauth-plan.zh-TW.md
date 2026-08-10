@@ -63,6 +63,7 @@ MediaWiki 官方 OAuth 文件說明 Authorization Code、refresh token、profile
 Toolforge secret 環境設定：
 
 ```dotenv
+WEB_AUTH_MODE=oauth
 WIKIMEDIA_OAUTH_CLIENT_ID=...
 WIKIMEDIA_OAUTH_CLIENT_SECRET=...
 WIKIMEDIA_OAUTH_CALLBACK_URL=https://<tool-name>.toolforge.org/auth/callback
@@ -80,7 +81,8 @@ WEB_SESSION_SECRET=<至少 32 bytes 的隨機值>
 - OAuth 2 login/callback/logout。
 - Token refresh、簽章 cookie、PKCE、CSRF、fail-closed 維護者角色與 Web 管理頁。
 - Web workflow 與 publish 改用登入者 OAuth token。
-- CLI 與未設定 OAuth 的本機 Web 保留 BotPassword 相容性。
+- CLI 已移除；BotPassword 只保留在明確設定 `WEB_AUTH_MODE=local` 的本機 Web 開發模式。
+- Toolforge 或 production 預設使用 OAuth；必要設定不完整時拒絕啟動，不會退回 BotPassword。
 
 ### 已完成：前端一致性
 
@@ -94,7 +96,7 @@ WEB_SESSION_SECRET=<至少 32 bytes 的隨機值>
 ### 已完成：營運可靠性
 
 - 新增 Web OAuth callback、CSRF 拒絕、session refresh 的 Express HTTP integration tests。
-- 所有 Web／CLI publish 路徑寫入 `logs/publish-audit.jsonl`；欄位包含操作者、OAuth consumer、模式、目標、revision ID、時間、workflow 與結果，且不記錄 token。
+- 所有 Web publish 路徑寫入 `logs/publish-audit.jsonl`；欄位包含操作者、OAuth consumer、模式、目標、revision ID、時間、workflow 與結果，且不記錄 token。
 - Maintenance publish history 同步保存 operator 與 OAuth consumer，舊紀錄仍可讀取。
 - `/healthz` 搭配 Toolforge HTTP health check；typed operational events 可監控登入失敗、refresh failure、publish failure、audit write failure 與 job duration，不記錄秘密、完整 user agent 或 IP。
 - 已將 Toolforge deployment、smoke test、監控、rollback 與 secret rotation 納入 `architecture.md` 的部署與營運架構，並在 Toolforge 自動使用 `TOOL_DATA_DIR` 保存 output 與 audit。
@@ -106,4 +108,4 @@ WEB_SESSION_SECRET=<至少 32 bytes 的隨機值>
 - Commons edit history 顯示實際授權使用者，並帶 OAuth consumer tag。
 - 登出、token 過期、Pod 重啟後都不會留下可用 cookie session。
 - 未登入或 CSRF 錯誤不能建立或發布工作。
-- 所有 live publish 仍必須經既有 review 頁面，且 CLI regression fixtures 完全不變。
+- 所有 live publish 仍必須經既有 review 頁面。
