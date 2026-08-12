@@ -19,8 +19,10 @@ import type {
 import {
   persistChallengeConfig,
   persistCommonArtifacts,
+  markSandboxPagesForDeletion,
   publishPage,
   readSourcePages,
+  resolvePublishTarget,
   updateProgress
 } from "./job-runner-support.js";
 
@@ -71,6 +73,17 @@ export async function runCreateVotingWorkflow({
     request.publishMode,
     publishAuditContext
   );
+  if (request.publishMode === "live") {
+    await markSandboxPagesForDeletion(
+      bot,
+      [{
+        label: "voting page",
+        targetTitle: resolvePublishTarget(request.credentials.name, request.challenge, "voting", "sandbox")
+      }],
+      (message) => jobStore.appendMessage(jobId, message),
+      publishAuditContext
+    );
+  }
 
   return {
     sourceCount: sourcePages.length,

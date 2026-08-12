@@ -81,6 +81,7 @@ Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間
 - `create-voting` 與 `count-votes-and-select-winners` 支援 `dry-run`、`sandbox`、`live`
 - `post-results-maintenance` 已支援 `dry-run`、`sandbox`、`live`，可正式發佈得獎通知、central announcement、Previous-page update 與檔案頁模板
 - `sandbox` 目標頁會依 `NAME` 中 `@` 前的主帳號名稱自動推導
+- 完整 `live` 發佈成功後，對應且仍存在的沙盒頁面會在頁首加上 `{{SD|U1}}`，供管理員刪除；不存在或已標記的頁面會略過
 - 已保存的登入資訊優先走系統 keychain，若不可用則退回本次程式執行期間的記憶體保存
 - OAuth 模式的 job 與 publish 使用目前登入維護者的短期 OAuth token；BotPassword 僅能在明確的本機模式使用
 - job history 會從 `output/jobs/*/logs/job.log` 重建

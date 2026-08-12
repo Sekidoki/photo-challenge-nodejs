@@ -19,9 +19,11 @@ import type {
   WorkflowSummary
 } from "./job-runner-support.js";
 import {
+  markSandboxPagesForDeletion,
   persistCommonArtifacts,
   publishPage,
   readSourcePages,
+  resolvePublishTarget,
   updateProgress
 } from "./job-runner-support.js";
 
@@ -52,6 +54,18 @@ export async function runVoteCountingWorkflow({
   await publishPage(bot, jobId, request.credentials.name, request.challenge, "voting", artifacts.revisedText, "Photo Challenge bot: revise voting page after validation", request.publishMode, publishAuditContext);
   await publishPage(bot, jobId, request.credentials.name, request.challenge, "result", artifacts.resultText, "Photo Challenge bot: create result page", request.publishMode, publishAuditContext);
   await publishPage(bot, jobId, request.credentials.name, request.challenge, "winners", artifacts.winnersText, "Photo Challenge bot: create winners page", request.publishMode, publishAuditContext);
+  if (request.publishMode === "live") {
+    await markSandboxPagesForDeletion(
+      bot,
+      [
+        { label: "voting page", targetTitle: resolvePublishTarget(request.credentials.name, request.challenge, "voting", "sandbox") },
+        { label: "result page", targetTitle: resolvePublishTarget(request.credentials.name, request.challenge, "result", "sandbox") },
+        { label: "winners page", targetTitle: resolvePublishTarget(request.credentials.name, request.challenge, "winners", "sandbox") }
+      ],
+      (message) => jobStore.appendMessage(jobId, message),
+      publishAuditContext
+    );
+  }
 
   return {
     sourceCount: sourcePages.length,

@@ -407,11 +407,15 @@ async function publishMaintenancePlanEntries(
   reportMessage: MessageReporter
 ): Promise<{ notifications: number; fileAssessments: number; announcements: number; previousPages: number }> {
   const entries = buildMaintenancePublishEntries(maintenancePlanContent, runtime.loginName, mode);
+  const sandboxCleanupPages = mode === "live"
+    ? buildMaintenancePublishEntries(maintenancePlanContent, runtime.loginName, "sandbox")
+      .map((entry) => ({ label: entry.label, targetTitle: entry.targetTitle }))
+    : [];
   return publishMaintenanceEditPlans(runtime.bot, runtime.jobId, entries, mode, reportMessage, runtime.publishAuditContext ?? {
     jobId: runtime.jobId,
     workflow: "post-results-maintenance",
     operator: runtime.loginName,
     oauthConsumer: null,
     mode
-  });
+  }, sandboxCleanupPages);
 }

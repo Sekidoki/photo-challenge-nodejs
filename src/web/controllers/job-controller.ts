@@ -432,7 +432,12 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
         jobStore.appendMessage(job.id, message);
       }
     },
-    buildWebPublishAuditContext(job, mode, credentials)
+    buildWebPublishAuditContext(job, mode, credentials),
+    mode === "live"
+      ? buildMaintenancePublishEntriesFromPlan(planResult.plan, loginName, "sandbox")
+        .filter((entry) => selectedIds.includes(entry.id))
+        .map((entry) => ({ label: entry.label, targetTitle: entry.targetTitle }))
+      : []
   );
   const skipped = result.skippedTotal > 0 ? t("publish.notice.skipped", { count: result.skippedTotal }) : "";
   response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.notice.maintenancePublished", {
@@ -492,7 +497,11 @@ export async function publishJobOutputs(request: Request, response: Response) {
         jobStore.appendMessage(job.id, message);
       }
     },
-    buildWebPublishAuditContext(job, mode, credentials)
+    buildWebPublishAuditContext(job, mode, credentials),
+    mode === "live"
+      ? buildPublishableArtifacts({ ...job, loginName }, generatedFiles, "sandbox")
+        .map((artifact) => ({ label: artifact.label, targetTitle: artifact.targetTitle }))
+      : []
   );
 
   response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.notice.pagesPublished", {

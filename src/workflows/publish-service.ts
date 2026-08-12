@@ -2,6 +2,7 @@ import { recordMaintenancePublish } from "../infra/maintenance-publish-history.j
 import { recordOperationalEvent } from "../infra/operational-events.js";
 import { recordPublishAudit, type PublishAuditContext } from "../infra/publish-audit.js";
 import type { CommonsBot, SavePageResult } from "../services/commons-bot.js";
+import { markSandboxPagesForDeletion, type SandboxCleanupPage } from "./job-runner-support.js";
 import { applyMaintenancePublishEntry, type MaintenancePublishEntry, type MaintenancePublishMode } from "./maintenance-publish.js";
 
 type MessageReporter = (message: string) => void;
@@ -38,7 +39,8 @@ export async function publishStandardPages(
   bot: CommonsBot,
   entries: StandardPublishPlan[],
   reportMessage: MessageReporter,
-  auditContext?: PublishAuditContext
+  auditContext?: PublishAuditContext,
+  sandboxCleanupPages: SandboxCleanupPage[] = []
 ): Promise<number> {
   for (const entry of entries) {
     let saveResult: SavePageResult;
@@ -62,6 +64,15 @@ export async function publishStandardPages(
     reportMessage(`Published ${entry.label} to ${entry.targetTitle}`);
   }
 
+  if (sandboxCleanupPages.length > 0 && auditContext) {
+    await markSandboxPagesForDeletion(
+      bot,
+      sandboxCleanupPages,
+      reportMessage,
+      auditContext
+    );
+  }
+
   return entries.length;
 }
 
@@ -71,7 +82,8 @@ export async function publishMaintenanceEditPlans(
   entries: MaintenancePublishEntry[],
   mode: MaintenancePublishMode,
   reportMessage: MessageReporter,
-  auditContext?: PublishAuditContext
+  auditContext?: PublishAuditContext,
+  sandboxCleanupPages: SandboxCleanupPage[] = []
 ): Promise<MaintenancePublishCounts> {
   const counts: MaintenancePublishCounts = {
     notifications: 0,
@@ -132,6 +144,15 @@ export async function publishMaintenanceEditPlans(
 
     const revNote = saveResult.newRevisionId ? ` (revision ${saveResult.newRevisionId})` : "";
     reportMessage(`Published ${entry.label} to ${entry.targetTitle}${revNote}`);
+  }
+
+  if (mode === "live" && sandboxCleanupPages.length > 0 && auditContext) {
+    await markSandboxPagesForDeletion(
+      bot,
+      sandboxCleanupPages,
+      reportMessage,
+      auditContext
+    );
   }
 
   return counts;

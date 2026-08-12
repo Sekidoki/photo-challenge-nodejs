@@ -48,6 +48,13 @@ export type AuthenticatedWorkflowContext = {
 
 type PublishPageType = "voting" | "result" | "winners";
 
+export type SandboxCleanupPage = {
+  label: string;
+  targetTitle: string;
+};
+
+const SANDBOX_SPEEDY_DELETION_TEMPLATE = "{{SD|U1}}";
+
 export function slugify(value: string): string {
   return value
     .trim()
@@ -231,6 +238,82 @@ export function resolvePublishTarget(
   if (pageType === "voting") return `${sandboxRoot}/${challenge}/Voting`;
   if (pageType === "result") return `${sandboxRoot}/${challenge}/Voting/Result`;
   return `${sandboxRoot}/${challenge}/Winners`;
+}
+
+export function prependSandboxSpeedyDeletionTemplate(content: string): string {
+  if (/^\s*\{\{\s*SD\s*\|\s*U1\s*\}\}/i.test(content)) {
+    return content;
+  }
+
+  return content ? `${SANDBOX_SPEEDY_DELETION_TEMPLATE}\n${content}` : SANDBOX_SPEEDY_DELETION_TEMPLATE;
+}
+
+export async function markSandboxPagesForDeletion(
+  bot: CommonsBot,
+  pages: SandboxCleanupPage[],
+  reportMessage: (message: string) => void,
+  auditContext: PublishAuditContext
+): Promise<number> {
+  let markedCount = 0;
+  const seenTitles = new Set<string>();
+
+  for (const page of pages) {
+    if (seenTitles.has(page.targetTitle)) continue;
+    seenTitles.add(page.targetTitle);
+
+    let currentContent: string;
+    try {
+      currentContent = (await bot.readPage(page.targetTitle)).content;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Page does not exist:")) {
+        reportMessage(`Skipped sandbox cleanup for ${page.targetTitle} because the page does not exist.`);
+        continue;
+      }
+      throw error;
+    }
+
+    const nextContent = prependSandboxSpeedyDeletionTemplate(currentContent);
+    if (nextContent === currentContent) {
+      reportMessage(`Skipped sandbox cleanup for ${page.targetTitle} because it is already marked for deletion.`);
+      continue;
+    }
+
+    let saveResult;
+    try {
+      saveResult = await bot.savePage(
+        page.targetTitle,
+        nextContent,
+        "Photo Challenge bot: mark obsolete sandbox page for speedy deletion"
+      );
+    } catch (error) {
+      await recordPublishAudit({
+        ...auditContext,
+        event: "publish.failed",
+        targetTitle: page.targetTitle,
+        revisionId: null,
+        result: "failure"
+      });
+      recordOperationalEvent({
+        event: "publish.failure",
+        outcome: "failure",
+        ...auditContext,
+        targetTitle: page.targetTitle,
+        failureStage: "save"
+      });
+      throw error;
+    }
+    await recordPublishAudit({
+      ...auditContext,
+      event: "publish.succeeded",
+      targetTitle: page.targetTitle,
+      revisionId: saveResult.newRevisionId,
+      result: saveResult.result
+    });
+    reportMessage(`Marked ${page.label} sandbox page for deletion at ${page.targetTitle}.`);
+    markedCount += 1;
+  }
+
+  return markedCount;
 }
 
 export async function publishPage(

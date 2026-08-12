@@ -80,6 +80,7 @@ It creates winner notifications, challenge announcements, Previous-page updates,
 - `create-voting` and `count-votes-and-select-winners` support `dry-run`, `sandbox`, and `live`
 - `post-results-maintenance` supports `dry-run`, `sandbox`, and `live` for winner notifications, central announcements, Previous-page updates, and file assessment templates
 - sandbox targets are derived from the main account part before `@` in `NAME`
+- after a complete `live` publish, existing matching sandbox pages are prepended with `{{SD|U1}}` for administrator deletion; missing or already tagged pages are skipped
 - saved credentials use the system keychain when available, with in-memory fallback for the current process
 - OAuth-mode jobs and publishes use the signed-in maintainer's short-lived OAuth token; BotPassword is available only in explicit local mode
 - job history is rebuilt from `output/jobs/*/logs/job.log`
