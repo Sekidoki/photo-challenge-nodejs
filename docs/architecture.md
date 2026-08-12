@@ -113,6 +113,8 @@ Handlebars views only render view models. They should not read files, call Commo
 
 The Web UI consumes pinned Wikimedia Codex design-token CSS from the installed package through a local static route; Toolforge pages do not depend on a third-party CDN. `styles.css` should use Codex variables for colors, borders, shadows, typography, and focus state. The dashboard's small JavaScript enhancement only reveals and enables settings for the selected workflow; the complete form remains usable as server-rendered HTML when JavaScript is unavailable.
 
+Express and Handlebars server-side rendering are an intentional architecture choice. The application is primarily forms, job progress, artifact inspection, and publish review; a full SPA would duplicate client state, API, and error-handling concerns without improving Commons workflow correctness. Add client-side behavior progressively and locally. Use Codex design tokens as the design system, and introduce a Codex component runtime only where a genuinely complex interaction requires it.
+
 ### Web authentication
 
 The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `src/web/oauth-session.ts` owns authorization state, token exchange/refresh, signed cookies, maintainer authorization, and CSRF tokens. Access and refresh tokens stay in the server process and must never be written to job logs or artifacts. A Web job copies only the current short-lived access token into its in-memory `JobRequest`.
@@ -126,6 +128,8 @@ Maintainer authorization is fail-closed and persisted at `output/config/maintain
 - When `NODE_ENV=production` or `TOOL_DATA_DIR` is present, an omitted mode safely defaults to `oauth` and never falls back to BotPassword.
 
 The in-memory OAuth session store assumes one Toolforge Web replica. Moving to multiple replicas requires a shared encrypted session store before increasing the replica count.
+
+The production OAuth consumer is a confidential OAuth 2 application registered on Meta-Wiki, limited to Wikimedia Commons, with the exact callback `https://photo-challenge.toolforge.org/auth/callback`. It uses authorization-code and refresh-token grants and requests only the page-editing permissions required by the workflows. The public consumer description must identify the tool, source repository, data-retention behavior, and sandbox/live review flow.
 
 OAuth callback, CSRF rejection, and access-token refresh are covered at the HTTP boundary by `oauth-http.test.ts`. OAuth login and refresh failures emit typed operational events without raw errors, tokens, complete user agents, or IP addresses.
 
@@ -206,6 +210,10 @@ Toolforge deployment is part of the system architecture because authentication s
 - Job data defaults to `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`. Use `PHOTO_CHALLENGE_DATA_ROOT` only when an explicit alternative persistent root is required.
 - Maintainer authorization data is stored at `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/config/maintainers.json` and is edited through the authenticated Web UI.
 
+### Production baseline
+
+The production service is `https://photo-challenge.toolforge.org/`, running as a single-replica `buildservice` in OAuth mode. As of 2026-08-12, the deployed and `main` baseline is commit `ff608e0`, built with Node.js `26.1.0`, npm `12.0.2`, and the latest Toolforge buildpack versions. The root `Procfile` supplies the `web: npm start` process. The service reports as running; `/healthz` remains the required post-restart smoke check, and sign-in uses the Meta-Wiki OAuth flow.
+
 ### Deployment configuration and secrets
 
 Before deployment, run `npm ci`, `npm run check`, `npm run check:test`, `npm test`, and `npm run build`. Register the exact OAuth callback `https://<tool-name>.toolforge.org/auth/callback` with the Wikimedia OAuth consumer.
@@ -223,10 +231,10 @@ toolforge envvars create USER_AGENT
 
 `WEB_SESSION_SECRET` must be generated from at least 32 random bytes. Secrets must not be committed, stored in `.env`, printed to logs, or copied into job artifacts. Restart the Web service after changing environment variables.
 
-Build and start from an immutable commit or tag:
+For routine production deployment, merge and validate the change on `main`, then build that public branch. Toolforge resolves public branch and tag names reliably; do not depend on abbreviated commit hashes as build refs:
 
 ```bash
-toolforge build start <repository-url> --ref <commit-or-tag>
+toolforge build start https://github.com/Sekidoki/photo-challenge-nodejs.git --ref main --use-latest-versions
 toolforge build show
 toolforge webservice buildservice start
 toolforge webservice buildservice status
@@ -271,6 +279,8 @@ Every publish attempt writes an append-only audit record to `output/jobs/<job-id
 - If publishing fails, inspect the Commons page history before retrying to avoid duplicate or conflicting edits. If audit writing fails, pause live publishing until persistent storage is repaired.
 - Roll back by building a previously known-good commit or tag and restarting the service. NFS-backed job data remains available, but a Pod restart invalidates all in-memory sessions and requires maintainers to sign in again.
 
+Toolforge SSH is an operator control path, not a development environment. Do not use VS Code Remote SSH against the Toolforge bastion: it can leave multiple `sshd-session` processes and exhaust the account's session allowance. Use one ordinary OpenSSH session at a time, avoid parallel or automatic retries, reuse a single interactive session for multi-step work, and close it when finished. Before an automated operator opens SSH, it must present the exact command, purpose, read/write impact, and success condition and receive explicit approval. A stalled or reset connection must not be retried without a new approval.
+
 Rotate a secret by generating a replacement, updating it through the interactive `toolforge envvars create` prompt, restarting the service, and repeating the health/OAuth/sandbox smoke checks. Revoke the old credential only after the replacement is verified.
 
-Operational behavior should be checked against the current official [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web), [Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service), and [environment variables](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars) documentation before production changes.
+Operational behavior should be checked against the current official [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web), [Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service), and [environment variables](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars) documentation before production changes. Authentication and UI changes should likewise follow the [MediaWiki OAuth developer documentation](https://www.mediawiki.org/wiki/OAuth/For_Developers), [OAuth application guidelines](https://meta.wikimedia.org/wiki/OAuth_app_guidelines), and [Wikimedia Codex](https://doc.wikimedia.org/codex/latest/) guidance.

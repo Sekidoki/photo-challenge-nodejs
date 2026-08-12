@@ -110,6 +110,8 @@ Web domain/service 檔案：
 
 Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解析 maintenance plan。
 
+Express + Handlebars 的 server-side rendering 是刻意的架構選擇。本系統主要由表單、工作進度、artifact 檢視與 publish review 組成；全面改成 SPA 會重複維護 client state、API 與錯誤處理，卻不會直接改善 Commons workflow 的正確性。Client-side 行為應採局部漸進增強，以 Codex design tokens 作為 design system；只有真正複雜的互動需要時才導入 Codex component runtime。Web UI 的 Codex CSS 由已安裝且固定版本的套件透過本機 static route 提供，不依賴第三方 CDN；停用 JavaScript 時，完整表單仍可使用。
+
 ### Web 登入
 
 部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
@@ -123,6 +125,8 @@ Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解�
 - `NODE_ENV=production` 或存在 `TOOL_DATA_DIR` 時，未明確設定也會安全地預設為 `oauth`，不會退回 BotPassword。
 
 目前 OAuth session store 位於記憶體，因此 Toolforge Web service 應維持單一 replica。若將來要擴為多 replica，必須先加入共享且加密的 session store。
+
+Production OAuth consumer 是在 Meta-Wiki 註冊的 confidential OAuth 2 application，只適用於 Wikimedia Commons，callback 必須精確為 `https://photo-challenge.toolforge.org/auth/callback`。它使用 authorization-code 與 refresh-token grants，且只申請 workflow 所需的頁面編輯權限。公開 consumer 說明必須列出工具用途、source repository、資料保存方式與 sandbox/live review 流程。
 
 `oauth-http.test.ts` 會從 HTTP 邊界驗證 OAuth callback、CSRF 拒絕與 access-token refresh。OAuth 登入或 refresh 失敗只會產生已定型的 operational event，不記錄原始錯誤、token、完整 user agent 或 IP。
 
@@ -144,6 +148,8 @@ output/jobs/<job-id>/
 - `logs/publish-audit.jsonl`：append-only 的 publish 成功、失敗與 no-op skip 結構化紀錄。欄位包含操作者、OAuth consumer、模式、目標、revision ID、時間、workflow 與結果，但不包含憑證或 OAuth token。
 
 `src/infra/job-history.ts` 會從 `logs/job.log` 重建過去 job。修改 log 欄位時要考慮舊 job 相容性。
+
+OAuth 模式以 `JobProgress.loginName` 作為 job owner。Dashboard history 只列出目前登入者的工作；job detail、status、artifact、review 與 publish controller 都會驗證目前 OAuth user。缺少 owner 或 owner 不符時一律視為 job 不存在，避免跨維護者洩露 job ID 與 metadata。本機 BotPassword 模式視為單人環境，不套用此 filter。
 
 `src/infra/job-retention.ts` 會刪除最後修改時間超過 30 天的直屬 job 目錄。Web server 啟動前會先清理一次，之後每 24 小時再執行；output root 不存在或個別目錄刪除失敗時，不會阻止應用程式啟動。
 
@@ -201,6 +207,10 @@ Toolforge deployment 屬於系統架構的一部分，因為 authentication sess
 - Job data 預設放在 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/jobs`；只有需要明確替代的持久路徑時才設定 `PHOTO_CHALLENGE_DATA_ROOT`。
 - 維護者授權資料保存在 `${TOOL_DATA_DIR}/photo-challenge-nodejs/output/config/maintainers.json`，並透過已驗證的 Web UI 編輯。
 
+### Production baseline
+
+正式服務為 `https://photo-challenge.toolforge.org/`，以單一 replica 的 `buildservice` 運行並固定使用 OAuth 模式。截至 2026-08-12，已部署且與 `main` 同步的 baseline 是 commit `ff608e0`，使用 Node.js `26.1.0`、npm `12.0.2` 與 Toolforge latest buildpack versions 建置。根目錄 `Procfile` 提供 `web: npm start` process；service status 顯示 running，restart 後仍必須以 `/healthz` smoke check 驗證，登入使用 Meta-Wiki OAuth flow。
+
 ### 部署設定與 secret
 
 部署前執行 `npm ci`、`npm run check`、`npm run check:test`、`npm test` 與 `npm run build`。Wikimedia OAuth consumer 必須登記完全相符的 callback：`https://<tool-name>.toolforge.org/auth/callback`。
@@ -218,10 +228,10 @@ toolforge envvars create USER_AGENT
 
 `WEB_SESSION_SECRET` 至少使用 32 個隨機 bytes 產生。Secret 不得 commit、不得寫入 `.env`、不得輸出到 logs，也不得放入 job artifacts。環境變數變更後必須重啟 Web service。
 
-以不可變的 commit 或 tag 建置並啟動：
+例行 production 部署應先將變更合併並驗證於 `main`，再從公開 branch 建置。Toolforge 可穩定解析公開 branch 與 tag 名稱；build ref 不應依賴縮寫 commit hash：
 
 ```bash
-toolforge build start <repository-url> --ref <commit-or-tag>
+toolforge build start https://github.com/Sekidoki/photo-challenge-nodejs.git --ref main --use-latest-versions
 toolforge build show
 toolforge webservice buildservice start
 toolforge webservice buildservice status
@@ -266,6 +276,8 @@ Operational logs 使用 JSON event。建議初始告警門檻如下：
 - Publish 失敗時，重試前先檢查 Commons page history，避免重複或衝突 edit。Audit write 失敗時，先停止 live publish，直到 persistent storage 修復。
 - Rollback 時以已知正常的舊 commit 或 tag 重新 build 並 restart。NFS-backed job data 會保留，但 Pod restart 會使所有 in-memory session 失效，維護者必須重新登入。
 
+Toolforge SSH 是 operator control path，不是 development environment。禁止以 VS Code Remote SSH 連入 Toolforge bastion，因為它可能留下多個 `sshd-session` processes 並耗盡帳號的 session allowance。每次只使用一個一般 OpenSSH session，不並行、不自動重試；多步操作應重用同一個 interactive session，完成後立即退出。自動化 operator 在建立 SSH 前，必須先提出完整指令、目的、讀寫影響與成功條件，取得明確核准後才能連線；連線卡住或 reset 後，未重新取得核准不得重試。
+
 Secret rotation 的順序是：產生替代值、透過互動式 `toolforge envvars create` 更新、restart service、重跑 health/OAuth/sandbox smoke checks，確認替代值正常後才撤銷舊 credential。
 
-Production 變更前，應以最新官方 [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web)、[Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service) 與[環境變數](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars)文件核對實際操作。
+Production 變更前，應以最新官方 [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web)、[Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service) 與[環境變數](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars)文件核對實際操作。Authentication 與 UI 變更也必須遵循 [MediaWiki OAuth developer documentation](https://www.mediawiki.org/wiki/OAuth/For_Developers)、[OAuth application guidelines](https://meta.wikimedia.org/wiki/OAuth_app_guidelines) 與 [Wikimedia Codex](https://doc.wikimedia.org/codex/latest/) 指引。

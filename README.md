@@ -11,7 +11,7 @@ It provides a Web UI for three common workflows:
 
 ## Requirements
 
-- Node.js `26.7.0`
+- Node.js `26.x`
 - npm `12`
 - A Wikimedia Commons BotPassword for local Web development (bound to `127.0.0.1` only), or a Wikimedia OAuth 2 client for a deployed Web UI
 
@@ -47,6 +47,12 @@ npm start
 
 Toolforge Build Service uses the root `Procfile` to run the same `npm start` entry point.
 
+## Production Deployment
+
+The production application is deployed at [photo-challenge.toolforge.org](https://photo-challenge.toolforge.org/) as a single-replica Toolforge `buildservice` with persistent storage mounted. It runs in OAuth mode; the public UI never exposes or falls back to BotPassword authentication.
+
+The current production baseline was built from commit `ff608e0`, which is now merged into `main`. The verified Toolforge runtime is Node.js `26.1.0` with npm `12.0.2`; `/healthz` is the deployment smoke-check endpoint. See the architecture document for the complete build, restart, verification, rollback, and SSH operating procedure.
+
 ## Usage Overview
 
 ### 1. Prepare voting page
@@ -77,6 +83,7 @@ It creates winner notifications, challenge announcements, Previous-page updates,
 - saved credentials use the system keychain when available, with in-memory fallback for the current process
 - OAuth-mode jobs and publishes use the signed-in maintainer's short-lived OAuth token; BotPassword is available only in explicit local mode
 - job history is rebuilt from `output/jobs/*/logs/job.log`
+- in OAuth mode, job history, status, results, artifacts, reviews, and publishing are accessible only to the operator who created the job; other maintainers receive a not-found response
 - job directories are checked when Web starts and every 24 hours; `output/jobs/<job-id>/` directories last modified more than 30 days ago are removed automatically
 
 ## Validation and Troubleshooting
@@ -89,7 +96,7 @@ npm run check:test
 npm test
 ```
 
-Compatibility status: the project is verified on Node.js `26.7.0` with npm `12.0.2`.
+Compatibility status: local checks are verified on Node.js `26.7.0` with npm `12.0.2`; Toolforge production is verified on Node.js `26.1.0` with npm `12.0.2`.
 
 Notes:
 - keep `.env` out of version control
@@ -106,7 +113,6 @@ Implemented and working today:
 
 Maintainer docs:
 - Architecture and responsibility boundaries: [docs/architecture.md](docs/architecture.md)
-- Toolforge comparison, frontend plan, and OAuth rollout: [docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 Recommended next steps:
 - add a shared encrypted session store before increasing the Toolforge replica count

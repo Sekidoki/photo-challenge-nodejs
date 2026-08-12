@@ -11,7 +11,7 @@
 
 ## 環境需求
 
-- Node.js `26.7.0`
+- Node.js `26.x`
 - npm `12`
 - 本機 Web 開發可使用 Wikimedia Commons BotPassword；此模式只監聽 `127.0.0.1`，正式部署必須使用 Wikimedia OAuth 2 client
 
@@ -47,6 +47,12 @@ npm start
 ```
 
 Toolforge Build Service 使用根目錄的 `Procfile` 執行同一個 `npm start` 入口。
+
+## 正式部署
+
+正式站位於 [photo-challenge.toolforge.org](https://photo-challenge.toolforge.org/)，使用單一 replica 的 Toolforge `buildservice` 並掛載持久儲存。正式站固定使用 OAuth 模式，不會顯示 BotPassword，也不會在 OAuth 設定異常時退回 BotPassword。
+
+目前 production baseline 由 commit `ff608e0` 建置，該 commit 現已合併至 `main`。Toolforge 已驗證的 runtime 為 Node.js `26.1.0`、npm `12.0.2`，部署 smoke check 使用 `/healthz`。完整的 build、restart、驗證、rollback 與 SSH 操作規範請見架構文件。
 
 ## 使用概覽
 
@@ -91,7 +97,7 @@ npm run check:test
 npm test
 ```
 
-相容性狀態：目前已在 Node.js `26.7.0` 與 npm `12.0.2` 驗證通過。
+相容性狀態：本機檢查已在 Node.js `26.7.0`、npm `12.0.2` 驗證通過；Toolforge production 已在 Node.js `26.1.0`、npm `12.0.2` 驗證通過。
 
 補充：
 - `.env` 不應進版控
@@ -108,7 +114,6 @@ npm test
 
 維護者文件：
 - 正式架構與責任邊界：[docs/architecture.zh-TW.md](docs/architecture.zh-TW.md)
-- Toolforge 比較、前端方案與 OAuth 上線步驟：[docs/web-frontend-oauth-plan.zh-TW.md](docs/web-frontend-oauth-plan.zh-TW.md)
 
 建議下一步：
 - 增加 Toolforge replica 前，先導入共享且加密的 session store
