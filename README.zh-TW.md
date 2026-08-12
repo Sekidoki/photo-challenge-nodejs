@@ -1,8 +1,8 @@
-# Photo Challenge Node.js
+# 照片挑戰 Node.js
 
 [English](README.md) | 繁體中文
 
-這是一個用於 Wikimedia Commons Photo Challenge 作業流程的 Node.js + TypeScript 專案。
+這是一個用於維基共享資源照片挑戰作業流程的 Node.js + TypeScript 專案。
 它提供 Web UI 處理三種常見工作：
 
 - 從 submission pages 產生 voting page
@@ -13,7 +13,7 @@
 
 - Node.js `26.x`
 - npm `12`
-- 本機 Web 開發可使用 Wikimedia Commons BotPassword；此模式只監聽 `127.0.0.1`，正式部署必須使用 Wikimedia OAuth 2 client
+- 本機 Web 開發可使用維基共享資源 BotPassword；此模式只監聽 `127.0.0.1`，正式部署必須使用維基媒體 OAuth 2 client
 
 本機開發設定：
 
@@ -23,7 +23,7 @@
 - 設定 `BOT_PASSWORD`
 - 視需要設定 `USER_AGENT`、`PORT`、`CREDENTIAL_SERVICE_NAME`
 
-共享 Web 部署時，設定 `WEB_AUTH_MODE=oauth`，並在 Meta-Wiki 註冊 confidential OAuth 2 application。Callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。OAuth 模式缺少任一必要設定時，服務會拒絕啟動，不會退回 BotPassword。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；受保護的擁有者由 `config/maintainers.bootstrap.json` 初始化，之後與其他維護者一起保存在同一份 registry 清單。
+共享 Web 部署時，設定 `WEB_AUTH_MODE=oauth`，並在 Meta-Wiki 註冊 confidential OAuth 2 application。Callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。OAuth 模式缺少任一必要設定時，服務會拒絕啟動，不會退回 BotPassword。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定維基共享資源。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；受保護的擁有者由 `config/maintainers.bootstrap.json` 初始化，之後與其他維護者一起保存在同一份 registry 清單。
 
 ## 安裝
 
@@ -69,7 +69,7 @@ Toolforge Build Service 使用根目錄的 `Procfile` 執行同一個 `npm start
 
 適用於投票結束後。
 此流程會驗證投票者與投票內容、檢查截止時間，並產生 `*_revised.txt`、`*_result.txt`、`*_winners.txt`。
-Late vote 的判定使用每月月初 00:00 AoE 的 Photo Challenge 截止時間，生成結果也會反映相同的 cutoff。
+Late vote 的判定使用每月月初 00:00 AoE 的照片挑戰截止時間，生成結果也會反映相同的 cutoff。
 
 ### 3. Post-results maintenance
 
@@ -125,5 +125,5 @@ npm test
 ## 相關資源
 
 - 範例環境設定檔：[.env.example](.env.example)
-- 改寫來源：[Commons Photo Challenge](https://github.com/jarek-tuszynski/Commons_photo_challenge)，Jarek Tuszynski，公有領域授權
+- 改寫來源：[維基共享資源照片挑戰](https://github.com/jarek-tuszynski/Commons_photo_challenge)，Jarek Tuszynski，公有領域授權
 - 英文 README：[README.md](README.md)

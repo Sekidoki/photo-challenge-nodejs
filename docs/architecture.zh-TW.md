@@ -1,12 +1,12 @@
-# Photo Challenge Node.js 架構文件
+# 照片挑戰 Node.js 架構文件
 
 [English](architecture.md) | 臺灣正體中文
 
-本文件是 Photo Challenge Node.js 的正式架構說明。它定義目前程式的主要分層、資料流、責任邊界、相容性政策與測試策略，作為後續維護與擴充的依據。
+本文件是照片挑戰 Node.js 的正式架構說明。它定義目前程式的主要分層、資料流、責任邊界、相容性政策與測試策略，作為後續維護與擴充的依據。
 
 ## 1. 系統目的
 
-Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行作業。系統以 Web UI 涵蓋下列工作：
+照片挑戰 Node.js 用於支援維基共享資源照片挑戰的例行作業。系統以 Web UI 涵蓋下列工作：
 
 - 從 submission pages 產生 voting page。
 - 計票、驗票，並產生 revised voting、result、winners 頁面。
@@ -23,7 +23,7 @@ Photo Challenge Node.js 用於支援 Wikimedia Commons Photo Challenge 的例行
 - `src/renderers/`：產生 voting、revised voting、result、winners、voting index 等 wikitext。輸出格式由 regression tests 保護。
 - `src/workflows/`：工作流程 orchestration、artifact persistence、publish target resolution、post-results maintenance plan、publish service。
 - `src/infra/`：設定、credential store、job store、job history、output path、maintenance publish history 等基礎設施。
-- `src/services/`：外部服務 adapter，目前主要是 Wikimedia Commons bot。
+- `src/services/`：外部服務 adapter，目前主要是維基共享資源 bot。
 - `src/web/`：Express route/controller、Web view model service、artifact service、Handlebars views 與靜態資源。
 - `tests/`：focused unit tests 與 workflow fixture tests，保護重構與輸出相容性。
 
@@ -114,19 +114,19 @@ Express + Handlebars 的 server-side rendering 是刻意的架構選擇。本系
 
 ### Web 登入
 
-部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
+部署後的 Web UI 使用維基媒體 OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
 
 維護者授權採 fail-closed，並持久保存於 `output/config/maintainers.json`。Registry schema v2 會把唯一一筆受保護的 `owner` 與 manager、maintainer 一起放在同一個 `maintainers` array。Registry 不存在時由版本控制內的 `config/maintainers.bootstrap.json` 初始化；舊 v1 registry 也從該 bootstrap 清單取得 owner，並在下一次名單異動時寫成 v2。擁有者不能透過 Web UI 變更；擁有者可以授予或撤銷名單管理員及一般維護者，名單管理員只能新增或移除一般維護者，不能變更擁有者或其他名單管理員。每個已驗證請求都會重新檢查角色，因此移除權限後，既有 session 會在下一次請求失效。替換 owner 是明確的營運操作：service 停止期間修改持久 registry，並在同一次 review 中同步更新作為 recovery source 的 bootstrap file。
 
 `WEB_AUTH_MODE` 明確區隔驗證模式：
 
-- `oauth` 用於 Toolforge 與其他正式部署，Web 一律使用目前登入維護者的 Wikimedia 身分；必要 OAuth 設定不完整時服務拒絕啟動。
+- `oauth` 用於 Toolforge 與其他正式部署，Web 一律使用目前登入維護者的維基媒體身分；必要 OAuth 設定不完整時服務拒絕啟動。
 - `local` 僅供開發者工作站使用既有 BotPassword 表單，server 只監聽 `127.0.0.1`；Toolforge 或 production 明確誤設為此模式也會拒絕啟動。
 - `NODE_ENV=production` 或存在 `TOOL_DATA_DIR` 時，未明確設定也會安全地預設為 `oauth`，不會退回 BotPassword。
 
 目前 OAuth session store 位於記憶體，因此 Toolforge Web service 應維持單一 replica。若將來要擴為多 replica，必須先加入共享且加密的 session store。
 
-Production OAuth consumer 是在 Meta-Wiki 註冊的 confidential OAuth 2 application，只適用於 Wikimedia Commons，callback 必須精確為 `https://photo-challenge.toolforge.org/auth/callback`。它使用 authorization-code 與 refresh-token grants，且只申請 workflow 所需的頁面編輯權限。公開 consumer 說明必須列出工具用途、source repository、資料保存方式與 sandbox/live review 流程。
+Production OAuth consumer 是在 Meta-Wiki 註冊的 confidential OAuth 2 application，只適用於維基共享資源，callback 必須精確為 `https://photo-challenge.toolforge.org/auth/callback`。它使用 authorization-code 與 refresh-token grants，且只申請 workflow 所需的頁面編輯權限。公開 consumer 說明必須列出工具用途、source repository、資料保存方式與 sandbox/live review 流程。
 
 `oauth-http.test.ts` 會從 HTTP 邊界驗證 OAuth callback、CSRF 拒絕與 access-token refresh。OAuth 登入或 refresh 失敗只會產生已定型的 operational event，不記錄原始錯誤、token、完整 user agent 或 IP。
 
@@ -213,7 +213,7 @@ Toolforge deployment 屬於系統架構的一部分，因為 authentication sess
 
 ### 部署設定與 secret
 
-部署前執行 `npm ci`、`npm run check`、`npm run check:test`、`npm test` 與 `npm run build`。Wikimedia OAuth consumer 必須登記完全相符的 callback：`https://<tool-name>.toolforge.org/auth/callback`。
+部署前執行 `npm ci`、`npm run check`、`npm run check:test`、`npm test` 與 `npm run build`。維基媒體 OAuth consumer 必須登記完全相符的 callback：`https://<tool-name>.toolforge.org/auth/callback`。
 
 Production 設定應以互動提示建立，避免 secret 出現在 shell history 或 process argument：
 
@@ -280,4 +280,4 @@ Toolforge SSH 是 operator control path，不是 development environment。禁�
 
 Secret rotation 的順序是：產生替代值、透過互動式 `toolforge envvars create` 更新、restart service、重跑 health/OAuth/sandbox smoke checks，確認替代值正常後才撤銷舊 credential。
 
-Production 變更前，應以最新官方 [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web)、[Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service) 與[環境變數](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars)文件核對實際操作。Authentication 與 UI 變更也必須遵循 [MediaWiki OAuth developer documentation](https://www.mediawiki.org/wiki/OAuth/For_Developers)、[OAuth application guidelines](https://meta.wikimedia.org/wiki/OAuth_app_guidelines) 與 [Wikimedia Codex](https://doc.wikimedia.org/codex/latest/) 指引。
+Production 變更前，應以最新官方 [Toolforge Web Services](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Web)、[Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service) 與[環境變數](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Envvars)文件核對實際操作。Authentication 與 UI 變更也必須遵循 [MediaWiki OAuth developer documentation](https://www.mediawiki.org/wiki/OAuth/For_Developers)、[OAuth application guidelines](https://meta.wikimedia.org/wiki/OAuth_app_guidelines) 與 [維基媒體 Codex](https://doc.wikimedia.org/codex/latest/) 指引。
