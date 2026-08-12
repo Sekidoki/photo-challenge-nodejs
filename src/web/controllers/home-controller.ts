@@ -100,7 +100,6 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
     credentialStore,
     oauthConfigured,
     oauthConfigurationMessage: getOAuthConfigurationMessage(),
-    oauthUser: options.oauthUserName ? { name: options.oauthUserName } : null,
     recentCompletedJob: recentJobs.find((job) => job.statusCode === "completed") ?? null,
     recentJobs
   };

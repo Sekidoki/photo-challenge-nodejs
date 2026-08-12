@@ -201,6 +201,11 @@ test("protected owner manages the persistent maintainer list from the Web UI", a
     const csrfToken = html.match(/name="csrfToken" value="([^"]+)"/)?.[1];
     assert(csrfToken);
 
+    const ownerHome = await request(baseUrl, "/", cookies);
+    const ownerHomeHtml = await ownerHome.text();
+    assert.match(ownerHomeHtml, /href="\/maintainers"/);
+    assert.match(ownerHomeHtml, /github\.com\/Sekidoki\/photo-challenge-nodejs\/issues\/new\/choose/);
+
     const add = await request(baseUrl, "/maintainers", cookies, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -208,6 +213,12 @@ test("protected owner manages the persistent maintainer list from the Web UI", a
     });
     assert.equal(add.status, 302);
     assert.equal(add.headers.get("location"), "/maintainers?updated=1");
+
+    await request(baseUrl, "/maintainers", cookies, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ csrfToken, userName: "Regular Maintainer", role: "maintainer" }).toString()
+    });
 
     const updated = await request(baseUrl, "/maintainers", cookies);
     assert.match(await updated.text(), /Second Maintainer/);
@@ -217,6 +228,13 @@ test("protected owner manages the persistent maintainer list from the Web UI", a
     const managerCallback = await completeLogin(baseUrl, managerCookies);
     assert.equal(managerCallback.status, 302);
     assert.equal((await request(baseUrl, "/maintainers", managerCookies)).status, 200);
+    assert.match(await (await request(baseUrl, "/", managerCookies)).text(), /href="\/maintainers"/);
+
+    oauthOptions.userName = "Regular Maintainer";
+    const regularCookies: CookieJar = new Map();
+    assert.equal((await completeLogin(baseUrl, regularCookies)).status, 302);
+    assert.doesNotMatch(await (await request(baseUrl, "/", regularCookies)).text(), /href="\/maintainers"/);
+    oauthOptions.userName = "Second Maintainer";
 
     const removeManager = await request(baseUrl, "/maintainers/remove", cookies, {
       method: "POST",

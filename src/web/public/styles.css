@@ -52,6 +52,18 @@ a:hover {
   text-decoration: var(--text-decoration-none);
 }
 
+.github-link {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--spacing-35);
+  white-space: nowrap;
+}
+
+.github-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
 .site-header-tools,
 .site-account,
 .language-switcher {

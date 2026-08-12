@@ -48,7 +48,7 @@ export const config = {
     "photo-challenge-nodejs/0.1.0 (local development; contact via Wikimedia Commons user page)",
   credentialServiceName: process.env.CREDENTIAL_SERVICE_NAME ?? "photo-challenge-nodejs/commons",
   accessControl: {
-    ownerUserName: "Sekidoki",
+    bootstrapPath: path.join(projectRoot, "config", "maintainers.bootstrap.json"),
     registryPath: path.join(persistentDataRoot, "output", "config", "maintainers.json")
   },
   oauth: {

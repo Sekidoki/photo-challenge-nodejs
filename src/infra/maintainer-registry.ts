@@ -12,15 +12,22 @@ export type MaintainerRecord = {
   addedBy: string | null;
 };
 
-type StoredMaintainer = Omit<MaintainerRecord, "role"> & {
+type LegacyStoredMaintainer = Omit<MaintainerRecord, "role"> & {
   role: Exclude<MaintainerRole, "owner">;
 };
 
 type RegistryFile = {
+  version: 2;
+  updatedAt: string;
+  updatedBy: string;
+  maintainers: MaintainerRecord[];
+};
+
+type LegacyRegistryFile = {
   version: 1;
   updatedAt: string;
   updatedBy: string;
-  maintainers: StoredMaintainer[];
+  maintainers: LegacyStoredMaintainer[];
 };
 
 let mutationQueue: Promise<void> = Promise.resolve();
@@ -28,7 +35,7 @@ let mutationQueue: Promise<void> = Promise.resolve();
 export async function listMaintainers(): Promise<MaintainerRecord[]> {
   await mutationQueue;
   const registry = await readRegistry();
-  return [ownerRecord(), ...registry.maintainers.slice().sort(compareMaintainers)];
+  return registry.maintainers.slice().sort(compareMaintainers);
 }
 
 export async function getMaintainerRole(userName: string): Promise<MaintainerRole | null> {
@@ -53,8 +60,9 @@ export async function upsertMaintainer(
 
     const normalizedTarget = validateUserName(targetUserName);
     const targetKey = normalizeUserNameKey(normalizedTarget);
-    if (targetKey === normalizeUserNameKey(config.accessControl.ownerUserName)) {
-      throw new Error(`${config.accessControl.ownerUserName} is the protected owner and cannot be changed here.`);
+    const owner = getOwner(registry);
+    if (targetKey === normalizeUserNameKey(owner.userName)) {
+      throw new Error(`${owner.userName} is the protected owner and cannot be changed here.`);
     }
 
     const existingIndex = registry.maintainers.findIndex(
@@ -66,7 +74,7 @@ export async function upsertMaintainer(
       throw new Error("Only the owner can grant, change, or revoke maintainer-list management access.");
     }
 
-    const next: StoredMaintainer = {
+    const next: MaintainerRecord = {
       userName: normalizedTarget,
       role: requestedRole,
       addedAt: existing?.addedAt ?? new Date().toISOString(),
@@ -86,8 +94,9 @@ export async function removeMaintainer(actorUserName: string, targetUserName: st
     assertCanManage(actorRole);
 
     const targetKey = normalizeUserNameKey(validateUserName(targetUserName));
-    if (targetKey === normalizeUserNameKey(config.accessControl.ownerUserName)) {
-      throw new Error(`${config.accessControl.ownerUserName} is the protected owner and cannot be removed here.`);
+    const owner = getOwner(registry);
+    if (targetKey === normalizeUserNameKey(owner.userName)) {
+      throw new Error(`${owner.userName} is the protected owner and cannot be removed here.`);
     }
 
     const existing = registry.maintainers.find(
@@ -112,28 +121,51 @@ export function normalizeUserNameKey(userName: string): string {
 async function readRegistry(): Promise<RegistryFile> {
   try {
     const raw = await readFile(config.accessControl.registryPath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<RegistryFile>;
-    if (parsed.version !== 1 || !Array.isArray(parsed.maintainers)) {
+    const parsed = JSON.parse(raw) as Partial<RegistryFile | LegacyRegistryFile>;
+    if (!Array.isArray(parsed.maintainers)) {
       throw new Error("Maintainer registry has an unsupported format.");
     }
-    const maintainers = parsed.maintainers.map(validateStoredMaintainer);
-    assertNoDuplicateUsers(maintainers);
-    return {
-      version: 1,
-      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : "",
-      updatedBy: typeof parsed.updatedBy === "string" ? parsed.updatedBy : "",
-      maintainers
-    };
+    if (parsed.version === 2) {
+      return buildRegistry(
+        parsed.maintainers.map(validateStoredMaintainer),
+        parsed.updatedAt,
+        parsed.updatedBy
+      );
+    }
+    if (parsed.version === 1) {
+      const bootstrap = await readBootstrapRegistry();
+      const legacyMaintainers = parsed.maintainers.map(validateLegacyStoredMaintainer);
+      return buildRegistry(
+        [getOwner(bootstrap), ...legacyMaintainers],
+        parsed.updatedAt,
+        parsed.updatedBy
+      );
+    }
+    throw new Error("Maintainer registry has an unsupported format.");
   } catch (error) {
-    if (isMissingFile(error)) return emptyRegistry();
+    if (isMissingFile(error)) return readBootstrapRegistry();
     if (error instanceof SyntaxError) throw new Error("Maintainer registry is not valid JSON.");
     throw error;
   }
 }
 
-async function writeRegistry(maintainers: StoredMaintainer[], actorUserName: string): Promise<void> {
+async function readBootstrapRegistry(): Promise<RegistryFile> {
+  try {
+    const raw = await readFile(config.accessControl.bootstrapPath, "utf8");
+    const parsed = JSON.parse(raw) as Partial<RegistryFile>;
+    if (parsed.version !== 2 || !Array.isArray(parsed.maintainers)) {
+      throw new Error("Maintainer bootstrap has an unsupported format.");
+    }
+    return buildRegistry(parsed.maintainers.map(validateStoredMaintainer), "", "");
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error("Maintainer bootstrap is not valid JSON.");
+    throw error;
+  }
+}
+
+async function writeRegistry(maintainers: MaintainerRecord[], actorUserName: string): Promise<void> {
   const registry: RegistryFile = {
-    version: 1,
+    version: 2,
     updatedAt: new Date().toISOString(),
     updatedBy: actorUserName,
     maintainers: maintainers.slice().sort(compareMaintainers)
@@ -154,19 +186,15 @@ async function writeRegistry(maintainers: StoredMaintainer[], actorUserName: str
 function getRoleFromRegistry(userName: string, registry: RegistryFile): MaintainerRole | null {
   const key = normalizeUserNameKey(userName);
   if (!key) return null;
-  if (key === normalizeUserNameKey(config.accessControl.ownerUserName)) return "owner";
   return registry.maintainers.find((entry) => normalizeUserNameKey(entry.userName) === key)?.role ?? null;
 }
 
-function validateStoredMaintainer(value: unknown): StoredMaintainer {
+function validateStoredMaintainer(value: unknown): MaintainerRecord {
   if (!value || typeof value !== "object") throw new Error("Maintainer registry contains an invalid entry.");
   const record = value as Record<string, unknown>;
   const userName = validateUserName(record.userName);
-  if (record.role !== "manager" && record.role !== "maintainer") {
+  if (record.role !== "owner" && record.role !== "manager" && record.role !== "maintainer") {
     throw new Error(`Maintainer registry has an invalid role for ${userName}.`);
-  }
-  if (normalizeUserNameKey(userName) === normalizeUserNameKey(config.accessControl.ownerUserName)) {
-    throw new Error("The protected owner must not be duplicated in the maintainer registry.");
   }
   return {
     userName,
@@ -174,6 +202,12 @@ function validateStoredMaintainer(value: unknown): StoredMaintainer {
     addedAt: typeof record.addedAt === "string" ? record.addedAt : null,
     addedBy: typeof record.addedBy === "string" ? record.addedBy : null
   };
+}
+
+function validateLegacyStoredMaintainer(value: unknown): LegacyStoredMaintainer {
+  const record = validateStoredMaintainer(value);
+  if (record.role === "owner") throw new Error("Legacy maintainer registry contains an invalid owner entry.");
+  return record as LegacyStoredMaintainer;
 }
 
 function validateUserName(value: unknown): string {
@@ -189,22 +223,31 @@ function assertCanManage(role: MaintainerRole | null): asserts role is "owner" |
   if (!canManageMaintainers(role)) throw new Error("You are not allowed to manage the maintainer list.");
 }
 
-function assertNoDuplicateUsers(maintainers: StoredMaintainer[]): void {
+function assertNoDuplicateUsers(maintainers: MaintainerRecord[]): void {
   const keys = maintainers.map((entry) => normalizeUserNameKey(entry.userName));
   if (new Set(keys).size !== keys.length) throw new Error("Maintainer registry contains duplicate users.");
 }
 
-function ownerRecord(): MaintainerRecord {
-  return {
-    userName: config.accessControl.ownerUserName,
-    role: "owner",
-    addedAt: null,
-    addedBy: null
-  };
+function getOwner(registry: RegistryFile): MaintainerRecord {
+  const owners = registry.maintainers.filter((entry) => entry.role === "owner");
+  if (owners.length !== 1) throw new Error("Maintainer registry must contain exactly one owner.");
+  return owners[0] as MaintainerRecord;
 }
 
-function emptyRegistry(): RegistryFile {
-  return { version: 1, updatedAt: "", updatedBy: "", maintainers: [] };
+function buildRegistry(
+  maintainers: MaintainerRecord[],
+  updatedAt: unknown,
+  updatedBy: unknown
+): RegistryFile {
+  assertNoDuplicateUsers(maintainers);
+  const registry: RegistryFile = {
+    version: 2,
+    updatedAt: typeof updatedAt === "string" ? updatedAt : "",
+    updatedBy: typeof updatedBy === "string" ? updatedBy : "",
+    maintainers
+  };
+  getOwner(registry);
+  return registry;
 }
 
 function compareMaintainers(left: MaintainerRecord, right: MaintainerRecord): number {

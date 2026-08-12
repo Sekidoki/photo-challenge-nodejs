@@ -116,7 +116,7 @@ Express + Handlebars 的 server-side rendering 是刻意的架構選擇。本系
 
 部署後的 Web UI 使用 Wikimedia OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
 
-維護者授權採 fail-closed，並持久保存於 `output/config/maintainers.json`。`Sekidoki` 是受保護的擁有者，不能透過 Web UI 變更。擁有者可以授予或撤銷名單管理員及一般維護者；名單管理員只能新增或移除一般維護者，不能變更擁有者或其他名單管理員。每個已驗證請求都會重新檢查角色，因此移除權限後，既有 session 會在下一次請求失效。緊急替換擁有者必須明確修改程式並重新部署。
+維護者授權採 fail-closed，並持久保存於 `output/config/maintainers.json`。Registry schema v2 會把唯一一筆受保護的 `owner` 與 manager、maintainer 一起放在同一個 `maintainers` array。Registry 不存在時由版本控制內的 `config/maintainers.bootstrap.json` 初始化；舊 v1 registry 也從該 bootstrap 清單取得 owner，並在下一次名單異動時寫成 v2。擁有者不能透過 Web UI 變更；擁有者可以授予或撤銷名單管理員及一般維護者，名單管理員只能新增或移除一般維護者，不能變更擁有者或其他名單管理員。每個已驗證請求都會重新檢查角色，因此移除權限後，既有 session 會在下一次請求失效。替換 owner 是明確的營運操作：service 停止期間修改持久 registry，並在同一次 review 中同步更新作為 recovery source 的 bootstrap file。
 
 `WEB_AUTH_MODE` 明確區隔驗證模式：
 

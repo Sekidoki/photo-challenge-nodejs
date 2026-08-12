@@ -22,7 +22,7 @@ Setup details:
 - set `BOT_PASSWORD`
 - optional: set `USER_AGENT`, `PORT`, and `CREDENTIAL_SERVICE_NAME`
 
-For a shared Web deployment, set `WEB_AUTH_MODE=oauth` and register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`. Then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. OAuth mode refuses to start when any required setting is missing and never falls back to BotPassword. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. Maintainer access is fail-closed and managed from `/maintainers`; `Sekidoki` is the protected owner.
+For a shared Web deployment, set `WEB_AUTH_MODE=oauth` and register a confidential OAuth 2 application on Meta-Wiki with the exact callback URL `<public-base-url>/auth/callback`. Then set `WIKIMEDIA_OAUTH_CLIENT_ID`, `WIKIMEDIA_OAUTH_CLIENT_SECRET`, `WIKIMEDIA_OAUTH_CALLBACK_URL`, and a random `WEB_SESSION_SECRET`. OAuth mode refuses to start when any required setting is missing and never falls back to BotPassword. The recommended grants are “Edit existing pages” and “Create, edit, and move pages”, limited to Wikimedia Commons. Maintainer access is fail-closed and managed from `/maintainers`; the protected owner is bootstrapped from `config/maintainers.bootstrap.json` and persisted in the same registry list as all other maintainers.
 
 ## Install
 

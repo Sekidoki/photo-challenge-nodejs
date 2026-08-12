@@ -23,7 +23,7 @@
 - 設定 `BOT_PASSWORD`
 - 視需要設定 `USER_AGENT`、`PORT`、`CREDENTIAL_SERVICE_NAME`
 
-共享 Web 部署時，設定 `WEB_AUTH_MODE=oauth`，並在 Meta-Wiki 註冊 confidential OAuth 2 application。Callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。OAuth 模式缺少任一必要設定時，服務會拒絕啟動，不會退回 BotPassword。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；`Sekidoki` 是受保護的擁有者。
+共享 Web 部署時，設定 `WEB_AUTH_MODE=oauth`，並在 Meta-Wiki 註冊 confidential OAuth 2 application。Callback URL 必須精確設定為 `<公開網址>/auth/callback`，並填入 `WIKIMEDIA_OAUTH_CLIENT_ID`、`WIKIMEDIA_OAUTH_CLIENT_SECRET`、`WIKIMEDIA_OAUTH_CALLBACK_URL` 與隨機的 `WEB_SESSION_SECRET`。OAuth 模式缺少任一必要設定時，服務會拒絕啟動，不會退回 BotPassword。建議只申請「Edit existing pages」及「Create, edit, and move pages」，並限定 Wikimedia Commons。維護者權限採 fail-closed，登入後從 `/maintainers` 管理；受保護的擁有者由 `config/maintainers.bootstrap.json` 初始化，之後與其他維護者一起保存在同一份 registry 清單。
 
 ## 安裝
 
