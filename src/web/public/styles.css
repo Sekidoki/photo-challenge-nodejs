@@ -36,9 +36,8 @@ a:hover {
 }
 
 .site-header-inner {
-  max-width: 1120px;
-  margin: var(--spacing-0) auto;
-  padding: var(--spacing-75) var(--spacing-100);
+  width: var(--size-full);
+  padding: var(--spacing-75) clamp(var(--spacing-100), 2vw, var(--spacing-300));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -92,9 +91,10 @@ a:hover {
 }
 
 .shell {
-  max-width: 1120px;
-  margin: var(--spacing-0) auto;
-  padding: var(--spacing-200) var(--spacing-100) var(--spacing-400);
+  width: var(--size-full);
+  padding: clamp(var(--spacing-100), 2vw, var(--spacing-200))
+    clamp(var(--spacing-100), 2vw, var(--spacing-300))
+    var(--spacing-400);
 }
 
 .panel {
@@ -291,7 +291,7 @@ button:disabled {
 
 .task-card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: var(--spacing-100);
 }
 
@@ -366,7 +366,7 @@ button:disabled {
 }
 
 .settings-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   align-items: start;
   margin-top: var(--spacing-100);
 }
@@ -883,8 +883,6 @@ code,
 }
 
 @media (max-width: 760px) {
-  .task-card-grid,
-  .settings-grid,
   .publish-safety-grid {
     grid-template-columns: 1fr;
   }
