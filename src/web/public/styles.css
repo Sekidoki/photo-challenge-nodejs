@@ -28,6 +28,9 @@ a:hover {
   outline-offset: var(--spacing-12);
 }
 
+.skip-link { position: fixed; inset-block-start: var(--spacing-50); inset-inline-start: var(--spacing-50); z-index: var(--z-index-overlay); padding: var(--spacing-50) var(--spacing-75); color: var(--color-inverted-fixed); background: var(--background-color-progressive); border-radius: var(--border-radius-base); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+
 .site-header {
   position: relative;
   z-index: var(--z-index-toolbar);
@@ -151,6 +154,8 @@ small,
   border-radius: var(--border-radius-base);
   white-space: pre-wrap;
 }
+
+.notice--toast { position: fixed; inset-block-start: var(--spacing-100); inset-inline: max(var(--spacing-100), calc((100% - 48rem) / 2)); z-index: var(--z-index-overlay); box-shadow: var(--box-shadow-large); }
 
 .alert {
   color: var(--color-error);
@@ -414,6 +419,9 @@ button:disabled {
   background: var(--background-color-neutral-subtle);
 }
 
+.recent-history-card summary { min-height: var(--min-size-interactive-pointer); cursor: var(--cursor-base--hover); font-size: var(--font-size-x-large); }
+.recent-history-card[open] summary { margin-bottom: var(--spacing-75); }
+
 .progress-card {
   margin: var(--spacing-125) var(--spacing-0);
 }
@@ -524,6 +532,13 @@ button:disabled {
   font-size: var(--font-size-x-small);
   font-weight: var(--font-weight-bold);
 }
+
+.status-completed::before, .publish-status-new::before { content: "✓ "; }
+.status-running::before { content: "↻ "; }
+.status-queued::before { content: "… "; }
+.status-failed::before { content: "! "; }
+.publish-status-changed::before { content: "± "; }
+.publish-status-same::before { content: "= "; }
 
 .status-completed,
 .publish-status-new {
@@ -777,6 +792,11 @@ button:disabled {
   font-style: italic;
 }
 
+.diff-kind-label { grid-column: 1 / -1; padding: var(--spacing-25) var(--spacing-75); color: var(--color-subtle); border-bottom: var(--border-width-base) solid var(--border-color-muted); font-size: var(--font-size-x-small); font-weight: var(--font-weight-bold); text-transform: uppercase; }
+.diff-row-add .diff-kind-label { color: var(--color-success); }
+.diff-row-remove .diff-kind-label { color: var(--color-error); }
+.diff-row-change .diff-kind-label { color: var(--color-warning); }
+
 .diff-line-no {
   display: inline-flex;
   justify-content: flex-end;
@@ -933,6 +953,8 @@ code,
   .panel {
     padding: var(--spacing-100);
   }
+
+  .workflow-steps { grid-template-columns: 1fr 1fr; }
 
   .details div,
   .artifact-list li,

@@ -16,11 +16,13 @@
     "start": "node dist/server.js",
     "check": "tsc --noEmit -p tsconfig.json",
     "check:test": "tsc --noEmit -p tsconfig.test.json",
+    "check:assets": "node scripts/check-web-assets.mjs",
     "test": "npm run build:test && node .test-dist/tests/run.js",
     "report:web-vitals": "node scripts/report-web-vitals.mjs"
   },
   "dependencies": {
     "@wikimedia/codex-design-tokens": "2.6.2",
+    "compression": "^1.8.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-handlebars": "^9.0.1",
@@ -30,6 +32,7 @@
     "web-vitals": "^5.1.0"
   },
   "devDependencies": {
+    "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/luxon": "^3.7.4",
     "@types/node": "^26.2.0",

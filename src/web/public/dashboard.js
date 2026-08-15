@@ -42,7 +42,7 @@
   const modeNotice = sessionStorage.getItem("mode-change-notice");
   if (modeNotice) {
     sessionStorage.removeItem("mode-change-notice");
-    const notice = document.createElement("div"); notice.className = "notice"; notice.setAttribute("role", "status"); notice.textContent = modeNotice;
+    const notice = document.createElement("div"); notice.className = "notice notice--toast"; notice.setAttribute("role", "status"); notice.textContent = modeNotice;
     document.querySelector("h1")?.insertAdjacentElement("afterend", notice);
     const savedScroll = Number(sessionStorage.getItem("mode-change-scroll")); sessionStorage.removeItem("mode-change-scroll");
     if (Number.isFinite(savedScroll)) requestAnimationFrame(() => scrollTo({ top: savedScroll }));

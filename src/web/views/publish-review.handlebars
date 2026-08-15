@@ -29,11 +29,11 @@
   </aside>
 
   {{#if reviewNotice}}
-    <div class="notice">{{reviewNotice}}</div>
+    <div class="notice" role="status">{{reviewNotice}}</div>
   {{/if}}
 
   {{#if reviewWarning}}
-    <div class="alert">{{reviewWarning}}</div>
+    <div class="alert" role="alert">{{reviewWarning}}</div>
   {{/if}}
 
   <h2>{{t "common.targets"}}</h2>
@@ -57,29 +57,32 @@
             <a href="{{downloadUrl}}">{{t "common.download"}}</a>
           </div>
 
-          <section class="diff-table-wrap">
+          <section>
             {{#if firstDifferenceLine}}<div class="diff-tools"><button type="button" class="button-quiet" data-first-difference>{{t "publishReview.firstDifference"}}</button><label class="checkbox-row"><input type="checkbox" data-changes-only /> <span>{{t "publishReview.changesOnly"}}</span></label></div>{{/if}}
-            <div class="diff-table-head">
-              <span>{{t "publishReview.currentTarget"}}</span>
-              <span>{{t "publishReview.generatedOutput"}}{{#if firstDifferenceLine}} {{t "publishReview.fromLine" line=firstDifferenceLine}}{{/if}}</span>
+            <div class="diff-table-wrap" role="table" aria-label="{{t "publishReview.diffFor" target=targetTitle}}">
+            <div class="diff-table-head" role="row">
+              <span role="columnheader">{{t "publishReview.currentTarget"}}</span>
+              <span role="columnheader">{{t "publishReview.generatedOutput"}}{{#if firstDifferenceLine}} {{t "publishReview.fromLine" line=firstDifferenceLine}}{{/if}}</span>
             </div>
             <div class="diff-table">
               {{#each diffRows}}
-                <div class="diff-row diff-row-{{kind}}" data-diff-kind="{{kind}}">
+                <div class="diff-row diff-row-{{kind}}" data-diff-kind="{{kind}}" role="row">
+                  {{#unless isSkip}}<span class="diff-kind-label" role="cell" aria-colspan="2">{{#if isAdd}}{{t "review.diff.added"}}{{else if isRemove}}{{t "review.diff.removed"}}{{else if isChange}}{{t "review.diff.changedLabel"}}{{else}}{{t "review.diff.unchanged"}}{{/if}}</span>{{/unless}}
                   {{#if isSkip}}
-                    <div class="diff-cell diff-cell-skip" colspan="2">{{nextText}}</div>
+                    <div class="diff-cell diff-cell-skip" role="cell">{{nextText}}</div>
                   {{else}}
-                    <div class="diff-cell diff-cell-current">
+                    <div class="diff-cell diff-cell-current" role="cell">
                       <span class="diff-line-no">{{#if currentLineNumber}}{{currentLineNumber}}{{else}}&nbsp;{{/if}}</span>
                       <pre class="diff-line-text">{{currentText}}</pre>
                     </div>
-                    <div class="diff-cell diff-cell-next">
+                    <div class="diff-cell diff-cell-next" role="cell">
                       <span class="diff-line-no">{{#if nextLineNumber}}{{nextLineNumber}}{{else}}&nbsp;{{/if}}</span>
                       <pre class="diff-line-text">{{nextText}}</pre>
                     </div>
                   {{/if}}
                 </div>
               {{/each}}
+            </div>
             </div>
           </section>
         </article>

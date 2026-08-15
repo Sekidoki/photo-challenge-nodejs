@@ -14,7 +14,7 @@
     {{#if coreArtifacts.length}}<div class="artifact-grid">{{#each coreArtifacts}}<article class="artifact-card artifact-card-{{type}}"><p class="artifact-kicker">{{label}}</p><h3><code>{{name}}</code></h3><p class="artifact-copy">{{description}}</p><div class="artifact-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></div></article>{{/each}}</div>{{/if}}
   </section>
   <h2>{{t "progress.messages"}}</h2><ul class="messages" data-progress-messages>{{#each job.messages}}<li>{{this}}</li>{{/each}}</ul>
-  <div class="alert" data-progress-error {{#unless job.errorMessage}}hidden{{/unless}}>{{job.errorMessage}}</div>
+  <div class="alert" role="alert" data-progress-error {{#unless job.errorMessage}}hidden{{/unless}}>{{job.errorMessage}}</div>
   <div class="actions"><a data-result-link href="/jobs/{{job.id}}/result" {{#unless (eq job.status "completed")}}hidden{{/unless}}>{{t "progress.viewResult"}}</a><a href="/">{{t "common.startAnother"}}</a></div>
 </section>
-<script src="/static/progress.js" defer></script>
+<script src="/static/progress.js?v={{assetVersion}}" defer></script>

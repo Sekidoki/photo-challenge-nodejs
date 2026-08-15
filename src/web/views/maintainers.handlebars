@@ -7,8 +7,8 @@
     <a href="/">{{t "maintainers.back"}}</a>
   </div>
 
-  {{#if success}}<div class="notice">{{success}}</div>{{/if}}
-  {{#if fieldError}}<div class="alert error-summary" tabindex="-1" data-error-summary><strong>{{t "maintainers.error.summary"}}</strong><ul><li><a href="#maintainerUserName">{{fieldError}}</a></li></ul></div>{{else if error}}<div class="alert">{{error}}</div>{{/if}}
+  {{#if success}}<div class="notice" role="status">{{success}}</div>{{/if}}
+  {{#if fieldError}}<div class="alert error-summary" role="alert" tabindex="-1" data-error-summary><strong>{{t "maintainers.error.summary"}}</strong><ul><li><a href="#maintainerUserName">{{fieldError}}</a></li></ul></div>{{else if error}}<div class="alert" role="alert">{{error}}</div>{{/if}}
 
   {{#if maintainers.length}}
     <section class="maintainer-overview">

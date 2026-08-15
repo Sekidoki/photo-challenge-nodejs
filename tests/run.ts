@@ -15,6 +15,7 @@ import "./web/i18n.test.js";
 import "./web/job-access.test.js";
 import "./web/oauth-session.test.js";
 import "./web/oauth-http.test.js";
+import "./web/performance-http.test.js";
 import "./web/publish-review.test.js";
 import "./workflows/maintenance-publish.test.js";
 import "./workflows/post-results-maintenance.test.js";

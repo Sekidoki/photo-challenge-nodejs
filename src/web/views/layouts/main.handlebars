@@ -4,14 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{title}}</title>
-    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui.css" />
-    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui-mode-dark.css" media="(prefers-color-scheme: dark)" />
-    <link rel="stylesheet" href="/static/styles.css" />
-    <script src="/static/dashboard.js" defer></script>
-    <script src="/static/web-vitals/web-vitals.iife.js" defer></script>
-    <script src="/static/rum.js" defer></script>
+    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui.css?v=2.6.2" />
+    <link rel="stylesheet" href="/static/codex/theme-wikimedia-ui-mode-dark.css?v=2.6.2" media="(prefers-color-scheme: dark)" />
+    <link rel="stylesheet" href="/static/styles.css?v={{assetVersion}}" />
+    <script src="/static/dashboard.js?v={{assetVersion}}" defer></script>
+    <script src="/static/web-vitals/web-vitals.iife.js?v=5.1.0" defer></script>
+    <script src="/static/rum.js?v={{assetVersion}}" defer></script>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">{{t "accessibility.skipToContent"}}</a>
     <header class="site-header">
       <div class="site-header-inner">
         <a class="site-brand" href="/">{{t "app.name"}}</a>
@@ -38,7 +39,7 @@
         </div>
       </div>
     </header>
-    <main class="shell">
+    <main class="shell" id="main-content" tabindex="-1">
       {{{body}}}
     </main>
   </body>

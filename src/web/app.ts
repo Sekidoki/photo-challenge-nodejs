@@ -1,5 +1,8 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import express from "express";
+import compression from "compression";
 import { create } from "express-handlebars";
 import { indexRouter } from "./routes/index.js";
 import { jobsRouter } from "./routes/jobs.js";
@@ -16,6 +19,10 @@ import {
 
 export function createApp() {
   const app = express();
+  const publicRoot = path.join(process.cwd(), "src", "web", "public");
+  const assetVersion = createHash("sha256")
+    .update(["styles.css", "dashboard.js", "progress.js", "rum.js"].map((file) => readFileSync(path.join(publicRoot, file))).join(""))
+    .digest("hex").slice(0, 12);
   const handlebars = create({
     extname: ".handlebars",
     helpers: {
@@ -36,14 +43,22 @@ export function createApp() {
   app.set("view engine", ".handlebars");
   app.set("views", path.join(process.cwd(), "src", "web", "views"));
 
+  app.use(compression());
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
+  const staticOptions = { immutable: true, maxAge: "1y" } as const;
   app.use(
     "/static/codex",
-    express.static(path.join(process.cwd(), "node_modules", "@wikimedia", "codex-design-tokens"))
+    express.static(path.join(process.cwd(), "node_modules", "@wikimedia", "codex-design-tokens"), staticOptions)
   );
-  app.use("/static/web-vitals", express.static(path.join(process.cwd(), "node_modules", "web-vitals", "dist")));
-  app.use("/static", express.static(path.join(process.cwd(), "src", "web", "public")));
+  app.use("/static/web-vitals", express.static(path.join(process.cwd(), "node_modules", "web-vitals", "dist"), staticOptions));
+  app.use("/static", express.static(publicRoot, staticOptions));
+
+  app.use((_request, response, next) => {
+    response.setHeader("Cache-Control", "private, no-store");
+    response.locals.assetVersion = assetVersion;
+    next();
+  });
 
   app.use(async (request, response, next) => {
     try {
