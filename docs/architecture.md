@@ -115,6 +115,26 @@ The Web UI consumes pinned Wikimedia Codex design-token CSS from the installed p
 
 Express and Handlebars server-side rendering are an intentional architecture choice. The application is primarily forms, job progress, artifact inspection, and publish review; a full SPA would duplicate client state, API, and error-handling concerns without improving Commons workflow correctness. Add client-side behavior progressively and locally. Use Codex design tokens as the design system, and introduce a Codex component runtime only where a genuinely complex interaction requires it.
 
+### Front-end quality baseline
+
+Front-end changes are governed by Core Web Vitals and the Nielsen Norman usability heuristics. Real-user measurements must be evaluated separately for mobile and desktop at the 75th percentile. The good thresholds are LCP at or below 2.5 seconds, INP at or below 200 milliseconds, and CLS at or below 0.1. Lighthouse and TBT are development and CI signals; they do not replace 28 days of RUM or CrUX field data. Reports with insufficient samples must say so explicitly.
+
+The implemented baseline is grouped into three priority levels:
+
+- **P0 — measurable safety:** `web-vitals` records only metric name, value, rating, page type, and device class; it never records credentials, CSRF tokens, challenge content, or user names. `npm run report:web-vitals` reports 28-day p75 values and insufficient-data states. Job progress updates only the relevant DOM, pauses while hidden or offline, backs off after failures, exposes retry and refresh controls, and stops at a terminal state. High-impact operations show account, mode, targets, and counts, require confirmation, disable duplicate submission, and retain server-side concurrent-publish protection.
+- **P1 — task completion and recovery:** forms keep non-sensitive input after server validation, expose a focusable linked error summary, and associate field errors with `aria-invalid` and `aria-describedby`. Exceptional submission windows use localized date/time controls with explicit UTC and inclusive/exclusive boundaries. Pages identify the Prepare, Run, Review, and Publish stages. Mode switching is distinct from publishing, preserves maintenance selections and reading position, announces the change, and the diff review can jump to or isolate changes.
+- **P2 — performance, accessibility, and consistency:** text responses are compressed; versioned static assets use one-year immutable caching while authenticated HTML is private and not stored. `npm run check:assets` enforces compressed asset budgets. Progress JavaScript is external and cacheable. Dynamic mode feedback does not move active controls. The layout provides a skip link, visible focus, semantic status/error messages, meaningful diff table roles, and non-color change labels. External new-tab behavior is announced, and secondary dashboard history is collapsible.
+
+These constraints remain part of acceptance for future UI work:
+
+- Core forms and navigation must remain usable without JavaScript; enhancements must keep keyboard focus and the accessibility tree coherent.
+- New asynchronous content must not be inserted above an active control without reserved space or overlay treatment. Images and embeds must reserve intrinsic dimensions; an LCP image must not be lazy-loaded.
+- Primary actions use buttons and navigation uses links. English and Traditional Chinese messages must remain functionally equivalent and use consistent names for preview, download, review, and return actions.
+- Changes to Codex CSS or custom CSS require transfer-size and coverage measurement before removal. New client work must avoid tasks longer than roughly 50 milliseconds.
+- Automated checks cover typing, workflows, HTTP compression/cache headers, asset budgets, and template behavior. Release acceptance also includes 320 CSS-pixel and 200% zoom checks, keyboard traversal, light/dark contrast sampling, and NVDA/Firefox or VoiceOver/Safari review.
+
+Production reporting must group home, progress, result, standard publish review, maintenance review, and maintainer administration by device class. A release is not declared field-performance compliant until all three Core Web Vitals meet the good threshold at p75 with adequate data; low-traffic or newly deployed periods remain explicitly unverified.
+
 ### Web authentication
 
 The deployed Web UI uses Wikimedia OAuth 2 Authorization Code flow with PKCE. `src/web/oauth-session.ts` owns authorization state, token exchange/refresh, signed cookies, maintainer authorization, and CSRF tokens. Access and refresh tokens stay in the server process and must never be written to job logs or artifacts. A Web job copies only the current short-lived access token into its in-memory `JobRequest`.

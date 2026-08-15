@@ -112,6 +112,26 @@ Handlebars views 只呈現 view model，不讀檔、不呼叫 Commons、不解�
 
 Express + Handlebars 的 server-side rendering 是刻意的架構選擇。本系統主要由表單、工作進度、artifact 檢視與 publish review 組成；全面改成 SPA 會重複維護 client state、API 與錯誤處理，卻不會直接改善 Commons workflow 的正確性。Client-side 行為應採局部漸進增強，以 Codex design tokens 作為 design system；只有真正複雜的互動需要時才導入 Codex component runtime。Web UI 的 Codex CSS 由已安裝且固定版本的套件透過本機 static route 提供，不依賴第三方 CDN；停用 JavaScript 時，完整表單仍可使用。
 
+### 前端品質基線
+
+前端變更以 Core Web Vitals 與 Nielsen Norman 可用性啟發法作為護欄。真實使用者資料必須分開統計行動裝置與桌面裝置的第 75 百分位；良好門檻為 LCP 不超過 2.5 秒、INP 不超過 200 毫秒、CLS 不超過 0.1。Lighthouse 與 TBT 是開發及 CI 訊號，不能取代連續 28 天的 RUM 或 CrUX 欄位資料；樣本不足時必須明確標示。
+
+目前已落地的基線依原執行優先級分為三層：
+
+- **P0—可量測與操作安全：**`web-vitals` 只記錄指標名稱、數值、評級、頁面類型及裝置類別，不記錄憑證、CSRF token、挑戰內容或使用者名稱。`npm run report:web-vitals` 提供近 28 天 p75 與資料不足狀態。工作進度只更新必要 DOM，在頁籤隱藏或離線時暫停，失敗後退避並提供重試／重新整理，抵達終止狀態即停止。高影響操作會顯示帳號、模式、目標與數量，要求確認、停用重複送出，伺服器端亦防止並行重複發布。
+- **P1—任務完成與錯誤復原：**伺服器驗證失敗後保留非敏感輸入，以可聚焦且可連至欄位的錯誤摘要搭配 `aria-invalid`、`aria-describedby`。例外投稿期間使用在地化日期時間控制項，明示 UTC 與起訖邊界。頁面標示「準備、執行、檢視、發布」階段。模式切換與發布動作分離，會保留維護勾選及閱讀位置並提示變更；差異檢視可跳至第一處差異或只顯示變更。
+- **P2—效能、無障礙與一致性：**文字回應啟用壓縮；具版本的靜態資產使用一年 immutable cache，登入 HTML 則為 private 且禁止儲存。`npm run check:assets` 管理壓縮後資產預算。進度 JavaScript 已外移並可快取；模式提示不會推動正在操作的控制項。版面包含跳至主要內容、可見焦點、語意化狀態／錯誤、可理解的差異表格角色與非色彩標示。新分頁行為會被提示，次要的近期工作可折疊。
+
+後續 UI 變更仍須遵守下列驗收限制：
+
+- 核心表單與導覽在停用 JavaScript 時仍可使用；漸進增強不得破壞鍵盤焦點或無障礙樹。
+- 新增非同步內容不得在未預留空間時插入使用者正操作的控制項上方；圖片與嵌入內容必須預留尺寸，LCP 圖片不得 lazy-load。
+- 主要動作使用按鈕、導覽使用連結；英文與繁體中文功能及訊息必須對等，預覽、下載、檢視、返回等名稱維持一致。
+- 移除 Codex 或自訂 CSS 前必須量測傳輸大小與 coverage；新增前端工作不得造成約 50 毫秒以上的長任務。
+- 自動化檢查涵蓋型別、workflow、HTTP 壓縮／快取標頭、資產預算及模板行為。發布驗收另須包含 320 CSS px、200% 縮放、完整鍵盤流程、淺色／深色對比抽樣，以及 NVDA／Firefox 或 VoiceOver／Safari 測試。
+
+正式報表必須依裝置類別分組首頁、進度、結果、標準發布檢視、維護檢視及維護者管理。只有資料量充足且三項 Core Web Vitals 的 p75 全部達到良好門檻，才能宣告符合欄位效能標準；低流量或剛部署期間維持「尚未驗證」。
+
 ### Web 登入
 
 部署後的 Web UI 使用維基媒體 OAuth 2 Authorization Code flow 搭配 PKCE。`src/web/oauth-session.ts` 負責 authorization state、token 交換與更新、簽章 cookie、維護者授權，以及 CSRF token。Access/refresh token 只留在伺服器 process，禁止寫入 job log 或 artifact；Web job 只把當下的短期 access token 放進記憶體中的 `JobRequest`。
