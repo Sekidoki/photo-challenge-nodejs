@@ -158,6 +158,19 @@ small,
   background: var(--background-color-error-subtle);
 }
 
+.field-error { color: var(--color-error); font-weight: var(--font-weight-semi-bold); }
+input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--border-color-error); }
+.error-summary a { color: inherit; }
+.settings-timezone { grid-column: 1 / -1; margin: var(--spacing-0); color: var(--color-subtle); }
+
+.workflow-steps { display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; padding: 0; margin: var(--spacing-125) 0; counter-reset: stage; }
+.workflow-steps li { padding: var(--spacing-50); border-bottom: var(--border-width-thick) solid var(--border-color-muted); color: var(--color-subtle); text-align: center; }
+.workflow-steps li::before { counter-increment: stage; content: counter(stage) ". "; }
+.workflow-steps li.is-complete::after { content: " ✓"; }
+.workflow-steps li[aria-current="step"] { color: var(--color-progressive); border-color: var(--border-color-progressive); font-weight: var(--font-weight-bold); }
+.mode-control, .diff-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-75); flex-wrap: wrap; }
+.diff-tools { padding: var(--spacing-65); border-bottom: var(--border-width-base) solid var(--border-color-muted); }
+
 .notice {
   color: var(--color-success);
   border-color: var(--border-color-success);

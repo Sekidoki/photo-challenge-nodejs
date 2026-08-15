@@ -25,6 +25,7 @@ type HomeDefaults = {
 
 type HomePageOptions = {
   error?: string;
+  fieldErrors?: Record<string, string>;
   success?: string;
   defaults?: Partial<HomeDefaults>;
   oauthUserName?: string | null;
@@ -84,6 +85,8 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
   return {
     title: t("app.runner"),
     error: options.error,
+    fieldErrors: options.fieldErrors ?? {},
+    errorSummary: Object.entries(options.fieldErrors ?? {}).map(([field, message]) => ({ field, message })),
     success: options.success,
     defaults: {
       name: options.oauthUserName ?? options.defaults?.name ?? savedName ?? process.env.NAME ?? "",

@@ -40,13 +40,22 @@ export async function addOrUpdateMaintainer(request: Request, response: Response
 
   const body = request.body as Record<string, unknown>;
   const requestedRole = body.role === "manager" ? "manager" : "maintainer";
+  const requestedUserName = String(body.userName ?? "").trim();
+  if (!requestedUserName) {
+    await renderPage(response, context.userName, context.role, context.csrfToken, context.t, {
+      status: 400, error: context.t("maintainers.error.userNameRequired"), fieldError: context.t("maintainers.error.userNameRequired"), formUserName: ""
+    });
+    return;
+  }
   try {
-    await upsertMaintainer(context.userName, String(body.userName ?? ""), requestedRole);
+    await upsertMaintainer(context.userName, requestedUserName, requestedRole);
     response.redirect("/maintainers?updated=1");
   } catch (error) {
     await renderPage(response, context.userName, context.role, context.csrfToken, context.t, {
       status: 400,
-      error: error instanceof Error ? error.message : context.t("maintainers.error.updateFailed")
+      error: error instanceof Error ? error.message : context.t("maintainers.error.updateFailed"),
+      fieldError: error instanceof Error ? error.message : context.t("maintainers.error.updateFailed"),
+      formUserName: requestedUserName
     });
   }
 }
@@ -97,12 +106,14 @@ async function renderPage(
   actorRole: MaintainerRole,
   csrfToken: string,
   t: Translator,
-  options: { status: number; error?: string; success?: string }
+  options: { status: number; error?: string; success?: string; fieldError?: string; formUserName?: string }
 ): Promise<void> {
   const maintainers = canManageMaintainers(actorRole) ? await listMaintainers() : [];
   response.status(options.status).render("maintainers", {
     title: t("maintainers.title"),
     error: options.error,
+    fieldError: options.fieldError,
+    formUserName: options.formUserName ?? "",
     success: options.success,
     actor: {
       userName: actorUserName,

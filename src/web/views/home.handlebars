@@ -9,6 +9,7 @@
       <span>{{t "home.reportIssue"}}</span>
     </a>
   </div>
+  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li aria-current="step">{{t "workflow.prepare"}}</li><li>{{t "workflow.run"}}</li><li>{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
 
   {{#if oauthConfigured}}
     <section class="credential-card">
@@ -90,20 +91,25 @@
   {{/if}}
 
   {{#if success}}<div class="notice">{{success}}</div>{{/if}}
-  {{#if error}}<div class="alert">{{error}}</div>{{/if}}
+  {{#if errorSummary.length}}
+    <div class="alert error-summary" tabindex="-1" data-error-summary>
+      <strong>{{t "home.error.summary"}}</strong>
+      <ul>{{#each errorSummary}}<li><a href="#{{field}}">{{message}}</a></li>{{/each}}</ul>
+    </div>
+  {{else if error}}<div class="alert">{{error}}</div>{{/if}}
 
   <form method="post" action="/jobs" class="form-grid" data-dashboard-form>
     {{#if oauthConfigured}}<input type="hidden" name="csrfToken" value="{{csrfToken}}" />{{/if}}
     {{#unless oauthConfigured}}
-      <label>
+      <label for="name">
         <span>{{t "home.local.name"}}</span>
-        <input name="name" type="text" value="{{defaults.name}}" required />
-        <small>{{t "home.local.nameHelp"}}</small>
+        <input id="name" name="name" type="text" value="{{defaults.name}}" required autocomplete="username" {{#if fieldErrors.name}}aria-invalid="true" aria-describedby="name-error name-help"{{else}}aria-describedby="name-help"{{/if}} />
+        {{#if fieldErrors.name}}<small id="name-error" class="field-error">{{fieldErrors.name}}</small>{{/if}}<small id="name-help">{{t "home.local.nameHelp"}}</small>
       </label>
-      <label>
+      <label for="botPassword">
         <span>{{t "home.local.password"}}</span>
-        <input name="botPassword" type="password" {{#unless savedCredential}}required{{/unless}} />
-        <small>{{#if savedCredential}}{{t "home.local.passwordSavedHelp" name=savedCredential.name}}{{else}}{{t "home.local.passwordHelp"}}{{/if}}</small>
+        <input id="botPassword" name="botPassword" type="password" autocomplete="current-password" {{#unless savedCredential}}required{{/unless}} {{#if fieldErrors.botPassword}}aria-invalid="true" aria-describedby="botPassword-error botPassword-help"{{else}}aria-describedby="botPassword-help"{{/if}} />
+        {{#if fieldErrors.botPassword}}<small id="botPassword-error" class="field-error">{{fieldErrors.botPassword}}</small>{{/if}}<small id="botPassword-help">{{#if savedCredential}}{{t "home.local.passwordSavedHelp" name=savedCredential.name}}{{else}}{{t "home.local.passwordHelp"}}{{/if}}</small>
       </label>
       <label class="checkbox-row">
         <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
@@ -111,9 +117,10 @@
       </label>
     {{/unless}}
 
-    <label>
+    <label for="challenge">
       <span>{{t "common.challenge"}}</span>
-      <input name="challenge" type="text" value="{{defaults.challenge}}" placeholder="{{t "home.challenge.placeholder"}}" required />
+      <input id="challenge" name="challenge" type="text" value="{{defaults.challenge}}" placeholder="{{t "home.challenge.placeholder"}}" required {{#if fieldErrors.challenge}}aria-invalid="true" aria-describedby="challenge-error"{{/if}} />
+      {{#if fieldErrors.challenge}}<small id="challenge-error" class="field-error">{{fieldErrors.challenge}}</small>{{/if}}
     </label>
 
     <fieldset class="action-picker">
@@ -161,16 +168,17 @@
             </select>
             <small>{{t "home.voting.entryModeHelp"}}</small>
           </label>
-          <label>
+          <label for="submissionStart">
             <span>{{t "home.voting.start"}}</span>
-            <input name="submissionStart" type="text" value="{{defaults.submissionStart}}" placeholder="2026-06-01T00:00:00Z" />
-            <small>{{t "home.voting.startHelp"}}</small>
+            <input id="submissionStart" name="submissionStart" type="datetime-local" value="{{defaults.submissionStart}}" aria-describedby="submissionStart-help{{#if fieldErrors.submissionStart}} submissionStart-error{{/if}}" {{#if fieldErrors.submissionStart}}aria-invalid="true"{{/if}} />
+            {{#if fieldErrors.submissionStart}}<small id="submissionStart-error" class="field-error">{{fieldErrors.submissionStart}}</small>{{/if}}<small id="submissionStart-help">{{t "home.voting.startHelp"}}</small>
           </label>
-          <label>
+          <label for="submissionEnd">
             <span>{{t "home.voting.end"}}</span>
-            <input name="submissionEnd" type="text" value="{{defaults.submissionEnd}}" placeholder="2026-07-01T00:00:00Z" />
-            <small>{{t "home.voting.endHelp"}}</small>
+            <input id="submissionEnd" name="submissionEnd" type="datetime-local" value="{{defaults.submissionEnd}}" aria-describedby="submissionEnd-help{{#if fieldErrors.submissionEnd}} submissionEnd-error{{/if}}" {{#if fieldErrors.submissionEnd}}aria-invalid="true"{{/if}} />
+            {{#if fieldErrors.submissionEnd}}<small id="submissionEnd-error" class="field-error">{{fieldErrors.submissionEnd}}</small>{{/if}}<small id="submissionEnd-help">{{t "home.voting.endHelp"}}</small>
           </label>
+          <p class="settings-timezone">{{t "home.voting.timezone"}}</p>
         </div>
       </section>
       <section data-workflow-settings="count-votes-and-select-winners">

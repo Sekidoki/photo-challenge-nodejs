@@ -40,7 +40,28 @@ const activePublishOperations = new Set<string>();
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
   const endsAt = String(body.submissionEnd ?? "").trim();
-  return parseSubmissionWindowValues(startsAt, endsAt);
+  const asUtcIso = (value: string) => value && !/(?:Z|[+-]\d\d:\d\d)$/u.test(value)
+    ? `${value}${/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/u.test(value) ? ":00" : ""}Z`
+    : value;
+  return parseSubmissionWindowValues(asUtcIso(startsAt), asUtcIso(endsAt));
+}
+
+function validateHomeFields(body: Record<string, unknown>, oauthRequired: boolean, hasSavedCredential: boolean, t: Translator) {
+  const errors: Record<string, string> = {};
+  const action = String(body.action ?? DEFAULT_JOB_ACTION);
+  if (!String(body.challenge ?? "").trim()) errors.challenge = t("home.error.challengeRequired");
+  if (!oauthRequired && !String(body.name ?? "").trim()) errors.name = t("home.error.nameRequired");
+  if (!oauthRequired && !hasSavedCredential && !String(body.botPassword ?? "")) errors.botPassword = t("home.error.passwordRequired");
+  const start = String(body.submissionStart ?? "").trim();
+  const end = String(body.submissionEnd ?? "").trim();
+  if (action === "create-voting" && Boolean(start) !== Boolean(end)) {
+    const message = t("home.error.datesTogether"); errors.submissionStart = message; errors.submissionEnd = message;
+  } else if (action === "create-voting" && start && end) {
+    try { parseSubmissionWindow(body); } catch {
+      const message = t("home.error.dateOrder"); errors.submissionStart = message; errors.submissionEnd = message;
+    }
+  }
+  return errors;
 }
 
 function buildJobRequest(body: Record<string, unknown>): JobRequest {
@@ -134,6 +155,16 @@ export async function createJob(request: Request, response: Response) {
   const authenticatedBody = oauthSession
     ? { ...body, name: oauthSession.userName, botPassword: "" }
     : body;
+  const submittedName = String(authenticatedBody.name ?? "").trim();
+  const hasSavedCredential = oauthRequired || !submittedName ? false : Boolean(await getCredentialPassword(submittedName));
+  const fieldErrors = validateHomeFields(authenticatedBody, oauthRequired, hasSavedCredential, t);
+  if (Object.keys(fieldErrors).length > 0) {
+    response.status(400).render("home", await buildHomePageViewModel({
+      error: t("home.error.summary"), fieldErrors, locale,
+      oauthUserName: oauthSession?.userName ?? null, defaults: buildHomeDefaults(authenticatedBody)
+    }));
+    return;
+  }
   let jobRequest: JobRequest;
   try {
     jobRequest = buildJobRequest(authenticatedBody);
@@ -145,6 +176,9 @@ export async function createJob(request: Request, response: Response) {
       "home",
       await buildHomePageViewModel({
         error: error instanceof Error ? error.message : t("home.error.invalidSettings"),
+        fieldErrors: error instanceof Error && /submission|date\/time|start earlier/u.test(error.message)
+          ? { submissionStart: t("home.error.dateOrder"), submissionEnd: t("home.error.dateOrder") }
+          : {},
         locale,
         oauthUserName: oauthSession?.userName ?? null,
         defaults: buildHomeDefaults(authenticatedBody)

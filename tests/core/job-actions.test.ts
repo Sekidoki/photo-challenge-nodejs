@@ -63,6 +63,14 @@ test("parseSubmissionWindowValues validates partial and reversed windows", () =>
     () => parseSubmissionWindowValues("2026-07-01T00:00:00Z", "2026-06-01T00:00:00Z"),
     /start earlier than end/
   );
+  assert.throws(
+    () => parseSubmissionWindowValues("not-a-date", "2026-06-01T00:00:00Z"),
+    /valid ISO date\/times/
+  );
+  assert.deepEqual(
+    parseSubmissionWindowValues("2026-06-01T00:00:00Z", "2026-07-01T00:00:00Z"),
+    { startsAt: "2026-06-01T00:00:00Z", endsAt: "2026-07-01T00:00:00Z" }
+  );
 });
 
 test("vote-counting metadata labels new and legacy actions consistently", () => {

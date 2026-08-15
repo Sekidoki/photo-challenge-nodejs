@@ -1,5 +1,6 @@
 <section class="panel">
   <h1>{{t "result.title"}}</h1>
+  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li class="is-complete">{{t "workflow.run"}}</li><li aria-current="step">{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
   <p class="lede">{{t "result.lede" id=job.id status=job.status}}</p>
 
   <dl class="details">

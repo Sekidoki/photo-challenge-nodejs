@@ -36,4 +36,30 @@
       }
     });
   }
+
+  document.querySelector("[data-error-summary]")?.focus();
+
+  const modeNotice = sessionStorage.getItem("mode-change-notice");
+  if (modeNotice) {
+    sessionStorage.removeItem("mode-change-notice");
+    const notice = document.createElement("div"); notice.className = "notice"; notice.setAttribute("role", "status"); notice.textContent = modeNotice;
+    document.querySelector("h1")?.insertAdjacentElement("afterend", notice);
+    const savedScroll = Number(sessionStorage.getItem("mode-change-scroll")); sessionStorage.removeItem("mode-change-scroll");
+    if (Number.isFinite(savedScroll)) requestAnimationFrame(() => scrollTo({ top: savedScroll }));
+  }
+  for (const link of document.querySelectorAll("[data-mode-switch]")) link.addEventListener("click", () => {
+    if (!(link instanceof HTMLAnchorElement)) return;
+    if (link.hasAttribute("data-preserve-selections")) {
+      const url = new URL(link.href); document.querySelectorAll('input[name="selected"]:checked').forEach((input) => url.searchParams.append("selected", input.value)); link.href = url.toString();
+    }
+    sessionStorage.setItem("mode-change-notice", link.dataset.modeMessage || ""); sessionStorage.setItem("mode-change-scroll", String(scrollY));
+  });
+  for (const card of document.querySelectorAll("[data-diff-card]")) {
+    const first = Array.from(card.querySelectorAll("[data-diff-kind]")).find((row) => row.dataset.diffKind !== "same" && row.dataset.diffKind !== "skip");
+    if (first instanceof HTMLElement) { first.tabIndex = -1; card.querySelector("[data-first-difference]")?.addEventListener("click", () => first.focus()); }
+    card.querySelector("[data-changes-only]")?.addEventListener("change", (event) => {
+      const checked = event.target instanceof HTMLInputElement && event.target.checked;
+      card.querySelectorAll('[data-diff-kind="same"], [data-diff-kind="skip"]').forEach((row) => { if (row instanceof HTMLElement) row.hidden = checked; });
+    });
+  }
 })();

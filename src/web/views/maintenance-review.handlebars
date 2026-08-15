@@ -5,10 +5,10 @@
       <p class="lede">{{t "maintenanceReview.lede"}}</p>
     </div>
     <div class="actions">
-      <a href="{{alternateModeUrl}}">{{t "publishReview.switch" mode=alternateModeLabel}}</a>
       <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
     </div>
   </div>
+  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li class="is-complete">{{t "workflow.run"}}</li><li class="is-complete">{{t "workflow.review"}}</li><li aria-current="step">{{t "workflow.publish"}}</li></ol></nav>
 
   <dl class="details">
     <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
@@ -25,6 +25,7 @@
       <div><dt>{{t "safety.targetCount"}}</dt><dd>{{publishContext.targetCount}}</dd></div>
     </dl>
     <p>{{#if publishContext.isLive}}{{t "safety.liveWarning"}}{{else}}{{t "safety.sandboxWarning"}}{{/if}}</p>
+    <div class="mode-control"><strong>{{t "publishReview.currentMode" mode=publishContext.modeLabel}}</strong><a data-mode-switch data-preserve-selections data-mode-message="{{t "publishReview.modeChanged" mode=alternateModeLabel}}" href="{{alternateModeUrl}}">{{t "publishReview.switch" mode=alternateModeLabel}}</a></div>
   </aside>
 
   {{#if reviewNotice}}

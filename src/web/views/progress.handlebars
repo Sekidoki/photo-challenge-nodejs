@@ -1,5 +1,6 @@
 <section class="panel" data-progress-page data-status-url="/jobs/{{job.id}}/status" data-initial-status="{{job.status}}" data-step-prefix="{{t "progress.stepPrefix"}}" data-completed-text="{{t "progress.completedSummary"}}" data-failed-text="{{t "progress.failedSummary"}}" data-retry-text="{{t "progress.updateFailed"}}">
   <h1>{{t "progress.title"}}</h1>
+  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li aria-current="step">{{t "workflow.run"}}</li><li>{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
   <p class="lede" data-progress-summary tabindex="-1">{{t "progress.lede" id=job.id status=job.status}}</p>
   <div class="progress-card" role="progressbar" aria-label="{{t "progress.label"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{job.percent}}">
     <div class="progress-meta"><span data-progress-step>{{t "progress.step" step=job.currentStep}}</span><span data-progress-percent>{{job.percent}}%</span></div>

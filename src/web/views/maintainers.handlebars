@@ -8,7 +8,7 @@
   </div>
 
   {{#if success}}<div class="notice">{{success}}</div>{{/if}}
-  {{#if error}}<div class="alert">{{error}}</div>{{/if}}
+  {{#if fieldError}}<div class="alert error-summary" tabindex="-1" data-error-summary><strong>{{t "maintainers.error.summary"}}</strong><ul><li><a href="#maintainerUserName">{{fieldError}}</a></li></ul></div>{{else if error}}<div class="alert">{{error}}</div>{{/if}}
 
   {{#if maintainers.length}}
     <section class="maintainer-overview">
@@ -61,10 +61,10 @@
       <p class="lede">{{#if actor.isOwner}}{{t "maintainers.addOwnerCopy"}}{{else}}{{t "maintainers.addManagerCopy"}}{{/if}}</p>
       <form method="post" action="/maintainers" class="maintainer-add-form">
         <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
-        <label>
+        <label for="maintainerUserName">
           <span>{{t "maintainers.userName"}}</span>
-          <input name="userName" type="text" required autocomplete="off" />
-          <small>{{t "maintainers.userNameHelp"}}</small>
+          <input id="maintainerUserName" name="userName" type="text" value="{{formUserName}}" required autocomplete="username" {{#if fieldError}}aria-invalid="true" aria-describedby="maintainerUserName-error maintainerUserName-help"{{else}}aria-describedby="maintainerUserName-help"{{/if}} />
+          {{#if fieldError}}<small id="maintainerUserName-error" class="field-error">{{fieldError}}</small>{{/if}}<small id="maintainerUserName-help">{{t "maintainers.userNameHelp"}}</small>
         </label>
         {{#if actor.isOwner}}
           <label>
