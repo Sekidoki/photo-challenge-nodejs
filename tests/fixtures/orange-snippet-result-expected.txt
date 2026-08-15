@@ -17,5 +17,5 @@ The Score is the sum of the 3*/2*/1* votes. The Support is the count of 3*/2*/1*
 | [[File:Asian Lady Beetle (Harmonia axyridis) - Hamblen County, Tennessee - April 14, 2024.jpg|120px]] || [[User:David Ratledge|David Ratledge]] ([[User talk:David Ratledge|<span class="signature-talk">{{int:Talkpagelinktext}}</span>]]) || 2 || 0 || 1
 |}
 
-=== Issues corrected by the [[Commons:Photo challenge/code/Photo challenge library.py|software]] ===
+=== Issues corrected by the [[toolforge:photo-challenge|Photo Challenge tool]] ===
 * no issues found

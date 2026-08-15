@@ -103,7 +103,7 @@ export function listErrors(
   voters: VoterValidation[],
   challenge: string
 ): string[] {
-  const errors = ["=== Issues corrected by the [[Commons:Photo challenge/code/Photo challenge library.py|software]] ==="];
+  const errors = ["=== Issues corrected by the [[toolforge:photo-challenge|Photo Challenge tool]] ==="];
   const deadlineText = `${formatVoteDeadlineUtc(challenge)} ${getVoteDeadlineZoneLabel()}`;
 
   for (const voter of voters.filter((row) => row.error > 0)) {

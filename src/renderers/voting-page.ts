@@ -226,7 +226,7 @@ export function renderVotingPage(
   }
 
   if (issues.length > 0) {
-    lines.push("=== Issues corrected by the [[Commons:Photo challenge/code/create voting.py|software]] ===");
+    lines.push("=== Issues corrected by the [[toolforge:photo-challenge|Photo Challenge tool]] ===");
     for (const issue of issues) {
       lines.push(`* ${issue}`);
     }

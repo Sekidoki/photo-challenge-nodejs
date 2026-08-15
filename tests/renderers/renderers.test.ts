@@ -98,6 +98,7 @@ test("renderVotingPage produces issues for invalid entries and includes valid im
   assert.equal(rendered.issueCount, 1);
   assert.match(rendered.text, /Valid entry.jpg/);
   assert.match(rendered.text, /after the challenge closed/);
+  assert.match(rendered.text, /=== Issues corrected by the \[\[toolforge:photo-challenge\|Photo Challenge tool\]\] ===/);
 });
 
 test("renderVotingPage renders duo-coequal entries with one span anchor and one voting area", () => {
