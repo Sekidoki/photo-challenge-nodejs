@@ -84,11 +84,11 @@
       {{/each}}
     </div>
 
-    <form method="post" action="/jobs/{{job.id}}/publish" class="publish-form">
+    <form method="post" action="/jobs/{{job.id}}/publish" class="publish-form" data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLive" account=publishContext.accountName wiki=publishContext.wikiLabel count=publishContext.targetCount}}{{else}}{{t "safety.confirmSandbox" account=publishContext.accountName count=publishContext.targetCount}}{{/if}}">
       <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
       <div class="actions">
-        <button type="submit" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "publishReview.publish" mode=publishContext.modeLabel}}</button>
+        <button type="submit" data-processing-text="{{t "common.processing"}}" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "publishReview.publish" mode=publishContext.modeLabel}}</button>
         <a href="/jobs/{{job.id}}/result">{{t "common.cancel"}}</a>
       </div>
     </form>

@@ -74,7 +74,7 @@
 
   <h2>{{t "maintenanceReview.entries"}}</h2>
   {{#if reviewEntries.length}}
-    <form method="post" action="/jobs/{{job.id}}/maintenance-publish" class="maintenance-publish-form">
+    <form method="post" action="/jobs/{{job.id}}/maintenance-publish" class="maintenance-publish-form" data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLiveSelected" account=publishContext.accountName wiki=publishContext.wikiLabel}}{{else}}{{t "safety.confirmSandboxSelected" account=publishContext.accountName}}{{/if}}">
       <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
       <div class="maintenance-review-grid">
@@ -106,7 +106,7 @@
 
       <div class="actions maintenance-form-actions">
         {{#if canPublish}}
-          <button type="submit" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "maintenanceReview.publish" mode=publishContext.modeLabel}}</button>
+          <button type="submit" data-processing-text="{{t "common.processing"}}" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "maintenanceReview.publish" mode=publishContext.modeLabel}}</button>
         {{else}}
           <button type="submit" disabled>{{t "maintenanceReview.unavailable"}}</button>
         {{/if}}

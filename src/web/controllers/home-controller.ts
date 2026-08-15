@@ -6,6 +6,11 @@ import { jobStore } from "../../infra/job-store.js";
 import { getOAuthConfigurationMessage, getOAuthSession, isOAuthConfigured } from "../oauth-session.js";
 import { createTranslator, getRequestLocale, type SupportedLocale, type Translator } from "../i18n.js";
 import { isJobOwnedBy } from "../job-access.js";
+import { recordWebVital } from "../../infra/web-vitals.js";
+
+export async function collectWebVital(request: Request, response: Response) {
+  response.status(await recordWebVital(request.body) ? 204 : 400).end();
+}
 
 type HomeDefaults = {
   name: string;

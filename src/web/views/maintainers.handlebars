@@ -44,10 +44,10 @@
                 </form>
               {{/if}}
               {{#if canRemove}}
-                <form method="post" action="/maintainers/remove" class="inline-control-form">
+                <form method="post" action="/maintainers/remove" class="inline-control-form" data-confirm="{{t "maintainers.confirmRemove" name=userName}}">
                   <input type="hidden" name="csrfToken" value="{{../csrfToken}}" />
                   <input type="hidden" name="userName" value="{{userName}}" />
-                  <button type="submit" class="button-destructive">{{t "maintainers.remove"}}</button>
+                  <button type="submit" data-processing-text="{{t "common.processing"}}" class="button-destructive">{{t "maintainers.remove"}}</button>
                 </form>
               {{/if}}
             </div>

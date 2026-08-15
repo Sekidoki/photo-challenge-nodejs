@@ -35,6 +35,8 @@ import { recordOperationalEvent } from "../../infra/operational-events.js";
 import type { PublishAuditContext } from "../../infra/publish-audit.js";
 import { isJobOwnedBy } from "../job-access.js";
 
+const activePublishOperations = new Set<string>();
+
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
   const endsAt = String(body.submissionEnd ?? "").trim();
@@ -409,6 +411,14 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
     return;
   }
 
+  const operationKey = `${job.id}:${mode}:maintenance`;
+  if (activePublishOperations.has(operationKey)) {
+    response.status(409).send(t("publish.error.inProgress"));
+    return;
+  }
+  activePublishOperations.add(operationKey);
+  try {
+
   let bot;
   try {
     bot = await createCommonsBot({
@@ -445,6 +455,9 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
     mode: t(`mode.${mode}`),
     skipped
   }))}`);
+  } finally {
+    activePublishOperations.delete(operationKey);
+  }
 }
 
 export async function publishJobOutputs(request: Request, response: Response) {
@@ -475,6 +488,14 @@ export async function publishJobOutputs(request: Request, response: Response) {
     response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(t("review.warning.noFiles"))}`);
     return;
   }
+
+  const operationKey = `${job.id}:${mode}:standard`;
+  if (activePublishOperations.has(operationKey)) {
+    response.status(409).send(t("publish.error.inProgress"));
+    return;
+  }
+  activePublishOperations.add(operationKey);
+  try {
 
   let bot;
   try {
@@ -508,6 +529,9 @@ export async function publishJobOutputs(request: Request, response: Response) {
     count: publishedCount,
     mode: t(`mode.${mode}`)
   }))}`);
+  } finally {
+    activePublishOperations.delete(operationKey);
+  }
 }
 
 export async function renderArtifactPreview(request: Request, response: Response) {

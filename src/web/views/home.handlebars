@@ -34,9 +34,9 @@
         <div><dt>{{t "home.local.savedName"}}</dt><dd>{{#if savedCredential}}<code>{{savedCredential.name}}</code>{{else}}{{t "home.local.noSaved"}}{{/if}}</dd></div>
       </dl>
       {{#if savedCredential}}
-        <form method="post" action="/credentials/clear" class="inline-form-actions">
+        <form method="post" action="/credentials/clear" class="inline-form-actions" data-confirm="{{t "home.local.confirmClear" name=savedCredential.name}}">
           <input type="hidden" name="name" value="{{savedCredential.name}}" />
-          <button type="submit" class="button-quiet">{{t "home.local.clear"}}</button>
+          <button type="submit" data-processing-text="{{t "common.processing"}}" class="button-quiet">{{t "home.local.clear"}}</button>
         </form>
       {{/if}}
     </section>
@@ -208,7 +208,7 @@
 
     <div class="notice inline-notice">{{t "home.maintenance.note"}}</div>
     <div class="form-actions">
-      <button type="submit" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>{{t "home.start"}}</button>
+      <button type="submit" data-processing-text="{{t "home.starting"}}" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>{{t "home.start"}}</button>
       {{#if oauthConfigured}}{{#unless oauthUser}}<a class="button-link" href="/auth/login">{{t "home.signInToContinue"}}</a>{{/unless}}{{/if}}
     </div>
   </form>

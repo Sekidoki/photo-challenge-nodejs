@@ -1,94 +1,19 @@
-<section class="panel">
+<section class="panel" data-progress-page data-status-url="/jobs/{{job.id}}/status" data-initial-status="{{job.status}}" data-step-prefix="{{t "progress.stepPrefix"}}" data-completed-text="{{t "progress.completedSummary"}}" data-failed-text="{{t "progress.failedSummary"}}" data-retry-text="{{t "progress.updateFailed"}}">
   <h1>{{t "progress.title"}}</h1>
-  <p class="lede">{{t "progress.lede" id=job.id status=job.status}}</p>
-
-  <div class="progress-card">
-    <div class="progress-meta">
-      <span>{{t "progress.step" step=job.currentStep}}</span>
-      <span>{{job.percent}}%</span>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-fill" style="width: {{job.percent}}%;"></div>
-    </div>
+  <p class="lede" data-progress-summary tabindex="-1">{{t "progress.lede" id=job.id status=job.status}}</p>
+  <div class="progress-card" role="progressbar" aria-label="{{t "progress.label"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{job.percent}}">
+    <div class="progress-meta"><span data-progress-step>{{t "progress.step" step=job.currentStep}}</span><span data-progress-percent>{{job.percent}}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" data-progress-fill style="width: {{job.percent}}%;"></div></div>
   </div>
-
-  <dl class="details">
-    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div>
-  </dl>
-
-  {{#if (eq job.status "completed")}}
-    <section class="progress-shortcuts">
-      <div class="panel-header">
-        <div>
-          <h2>{{t "progress.ready"}}</h2>
-          <p class="lede">{{t "progress.readyCopy"}}</p>
-        </div>
-        <div class="actions">
-          <a href="/jobs/{{job.id}}/result">{{t "progress.fullResult"}}</a>
-        </div>
-      </div>
-
-      {{#if coreArtifacts.length}}
-        <div class="artifact-grid">
-          {{#each coreArtifacts}}
-            <article class="artifact-card artifact-card-{{type}}">
-              <p class="artifact-kicker">{{label}}</p>
-              <h3><code>{{name}}</code></h3>
-              <p class="artifact-copy">{{description}}</p>
-              <div class="artifact-actions">
-                <a href="{{previewUrl}}">{{t "common.preview"}}</a>
-                <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-              </div>
-            </article>
-          {{/each}}
-        </div>
-      {{else}}
-        <p>{{t "progress.noCore"}}</p>
-      {{/if}}
-    </section>
-  {{/if}}
-
-  <h2>{{t "progress.messages"}}</h2>
-  <ul class="messages">
-    {{#each job.messages}}
-      <li>{{this}}</li>
-    {{/each}}
-  </ul>
-
-  {{#if job.errorMessage}}
-    <div class="alert">{{job.errorMessage}}</div>
-  {{/if}}
-
-  <div class="actions">
-    {{#if (eq job.status "completed")}}
-      <a href="/jobs/{{job.id}}/result">{{t "progress.viewResult"}}</a>
-    {{/if}}
-    <a href="/">{{t "common.startAnother"}}</a>
-  </div>
+  <p class="poll-status" data-poll-status aria-live="polite"></p>
+  <div class="poll-recovery" data-poll-recovery hidden><button type="button" class="button-quiet" data-progress-retry>{{t "progress.retry"}}</button><a href="">{{t "progress.manualRefresh"}}</a></div>
+  <dl class="details"><div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div><div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div><div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div></dl>
+  <section class="progress-shortcuts" data-terminal-actions {{#unless (eq job.status "completed")}}hidden{{/unless}}>
+    <div class="panel-header"><div><h2>{{t "progress.ready"}}</h2><p class="lede">{{t "progress.readyCopy"}}</p></div><div class="actions"><a href="/jobs/{{job.id}}/result">{{t "progress.fullResult"}}</a></div></div>
+    {{#if coreArtifacts.length}}<div class="artifact-grid">{{#each coreArtifacts}}<article class="artifact-card artifact-card-{{type}}"><p class="artifact-kicker">{{label}}</p><h3><code>{{name}}</code></h3><p class="artifact-copy">{{description}}</p><div class="artifact-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></div></article>{{/each}}</div>{{/if}}
+  </section>
+  <h2>{{t "progress.messages"}}</h2><ul class="messages" data-progress-messages>{{#each job.messages}}<li>{{this}}</li>{{/each}}</ul>
+  <div class="alert" data-progress-error {{#unless job.errorMessage}}hidden{{/unless}}>{{job.errorMessage}}</div>
+  <div class="actions"><a data-result-link href="/jobs/{{job.id}}/result" {{#unless (eq job.status "completed")}}hidden{{/unless}}>{{t "progress.viewResult"}}</a><a href="/">{{t "common.startAnother"}}</a></div>
 </section>
-
-<script>
-  const jobId = "{{job.id}}";
-  const terminalStatuses = new Set(["completed", "failed"]);
-
-  async function refreshStatus() {
-    const response = await fetch(`/jobs/${jobId}/status`);
-    if (!response.ok) return;
-
-    const job = await response.json();
-    if (!terminalStatuses.has(job.status)) {
-      window.location.reload();
-      return;
-    }
-
-    if (terminalStatuses.has(job.status)) {
-      window.location.reload();
-    }
-  }
-
-  if (!terminalStatuses.has("{{job.status}}")) {
-    setTimeout(refreshStatus, 2000);
-  }
-</script>
+<script src="/static/progress.js" defer></script>

@@ -422,6 +422,14 @@ button:disabled {
 .progress-fill {
   height: var(--size-full);
   background: var(--background-color-progressive);
+  transition: width var(--transition-duration-medium) var(--transition-timing-function-system);
+}
+
+.poll-status { min-height: 1.5em; color: var(--color-subtle); }
+.poll-recovery { display: flex; align-items: center; gap: var(--spacing-75); }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill { transition: none; }
 }
 
 .details,

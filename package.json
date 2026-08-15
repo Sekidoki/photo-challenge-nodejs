@@ -16,7 +16,8 @@
     "start": "node dist/server.js",
     "check": "tsc --noEmit -p tsconfig.json",
     "check:test": "tsc --noEmit -p tsconfig.test.json",
-    "test": "npm run build:test && node .test-dist/tests/run.js"
+    "test": "npm run build:test && node .test-dist/tests/run.js",
+    "report:web-vitals": "node scripts/report-web-vitals.mjs"
   },
   "dependencies": {
     "@wikimedia/codex-design-tokens": "2.6.2",
@@ -25,7 +26,8 @@
     "express-handlebars": "^9.0.1",
     "keytar": "^7.9.0",
     "luxon": "^3.7.2",
-    "mwn": "^3.0.3"
+    "mwn": "^3.0.3",
+    "web-vitals": "^5.1.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

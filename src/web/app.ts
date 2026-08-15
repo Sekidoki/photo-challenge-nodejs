@@ -42,6 +42,7 @@ export function createApp() {
     "/static/codex",
     express.static(path.join(process.cwd(), "node_modules", "@wikimedia", "codex-design-tokens"))
   );
+  app.use("/static/web-vitals", express.static(path.join(process.cwd(), "node_modules", "web-vitals", "dist")));
   app.use("/static", express.static(path.join(process.cwd(), "src", "web", "public")));
 
   app.use(async (request, response, next) => {
