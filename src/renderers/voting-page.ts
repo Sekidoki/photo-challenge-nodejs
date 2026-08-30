@@ -178,7 +178,7 @@ function renderDuoVotingEntry(entry: VotingEntry, num: number): string[] {
     renderVotingEntryHeading(num, path.basename(titleMember.fileName ?? "")),
     "{|",
     '|- valign="top"',
-    ...entry.members.map((member) => `|width="100pt" |${renderFile(member, `x${DUO_HEIGHT_PX}px`)}`),
+    ...entry.members.map((member) => `|${renderFile(member, `x${DUO_HEIGHT_PX}px`)}`),
     "|}"
   ];
 

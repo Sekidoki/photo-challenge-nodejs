@@ -116,6 +116,7 @@ test("renderVotingPage renders duo-coequal entries with one span anchor and one 
   assert.match(rendered.text, /===<span class="anchor" id="1">1<\/span>\. Inside\.jpg===/);
   assert.match(rendered.text, /\[\[File:Outside\.jpg\|none\|thumb\|x300px/);
   assert.match(rendered.text, /\[\[File:Inside\.jpg\|none\|thumb\|x300px/);
+  assert.doesNotMatch(rendered.text, /width="100pt"/);
   assert.equal(rendered.text.match(/Vote below this line/g)?.length, 1);
 });
 
