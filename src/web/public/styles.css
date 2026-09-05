@@ -481,6 +481,81 @@ button:disabled {
   margin-bottom: var(--spacing-0);
 }
 
+.result-leaderboard {
+  margin: var(--spacing-150) var(--spacing-0);
+}
+
+.result-ranking {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-100);
+  margin: var(--spacing-100) var(--spacing-0) var(--spacing-150);
+  padding: var(--spacing-0);
+  list-style: none;
+}
+
+.result-ranking-item {
+  display: grid;
+  align-content: start;
+  gap: var(--spacing-75);
+  overflow: hidden;
+  border: var(--border-width-base) solid var(--border-color-muted);
+  border-radius: var(--border-radius-base);
+  background: var(--background-color-base);
+  box-shadow: var(--box-shadow-medium);
+}
+
+.result-rank {
+  padding: var(--spacing-65) var(--spacing-100);
+  font-weight: var(--font-weight-bold);
+  background: var(--background-color-neutral-subtle);
+}
+
+.result-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-50);
+  padding: var(--spacing-0) var(--spacing-100);
+}
+
+.result-image-link {
+  display: block;
+  min-width: var(--size-0);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--border-radius-base);
+  background: var(--background-color-neutral-subtle);
+}
+
+.result-image-link img {
+  display: block;
+  width: var(--size-full);
+  height: var(--size-full);
+  object-fit: contain;
+}
+
+.result-winner-details {
+  display: grid;
+  gap: var(--spacing-50);
+  margin: var(--spacing-0);
+  padding: var(--spacing-25) var(--spacing-100) var(--spacing-100);
+}
+
+.result-winner-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-75);
+}
+
+.result-winner-details dt {
+  font-weight: var(--font-weight-bold);
+}
+
+.result-winner-details dd {
+  margin: var(--spacing-0);
+  text-align: end;
+}
+
 .messages,
 .maintenance-bullet-list {
   padding-inline-start: var(--spacing-125);
@@ -955,6 +1030,10 @@ code,
   }
 
   .workflow-steps { grid-template-columns: 1fr 1fr; }
+
+  .result-ranking {
+    grid-template-columns: 1fr;
+  }
 
   .details div,
   .artifact-list li,

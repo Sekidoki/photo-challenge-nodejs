@@ -34,6 +34,7 @@ import { createTranslator, getRequestLocale, type Translator } from "../i18n.js"
 import { recordOperationalEvent } from "../../infra/operational-events.js";
 import type { PublishAuditContext } from "../../infra/publish-audit.js";
 import { isJobOwnedBy } from "../job-access.js";
+import { loadResultLeaderboard } from "../result-leaderboard.js";
 
 const activePublishOperations = new Set<string>();
 
@@ -276,12 +277,16 @@ export async function renderJobResult(request: Request, response: Response) {
   const notice = typeof request.query.notice === "string" ? request.query.notice : null;
   const canPublishReview = job.action === "create-voting" || isVoteCountingAction(job.action);
   const hasMaintenanceReview = job.action === "post-results-maintenance";
+  const leaderboard = isVoteCountingAction(job.action)
+    ? await loadResultLeaderboard(job.id, artifacts.generated)
+    : [];
 
   response.render("result", {
     title: `${t("result.title")} ${job.id}`,
     job,
     jobActionLabel: formatActionLabel(job.action, t),
     coreArtifacts,
+    leaderboard,
     generatedFiles: otherGeneratedFiles,
     logFiles: artifacts.logs,
     publishReviewUrl: `/jobs/${job.id}/publish-review?mode=${reviewMode}`,

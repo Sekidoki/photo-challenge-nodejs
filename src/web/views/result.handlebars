@@ -3,6 +3,36 @@
   <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li class="is-complete">{{t "workflow.run"}}</li><li aria-current="step">{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
   <p class="lede">{{t "result.lede" id=job.id status=job.status}}</p>
 
+  {{#if leaderboard.length}}
+    <section class="result-leaderboard" aria-labelledby="result-leaderboard-heading">
+      <h2 id="result-leaderboard-heading">{{t "result.top.heading"}}</h2>
+      <ol class="result-ranking">
+        {{#each leaderboard}}
+          <li class="result-ranking-item">
+            <div class="result-rank">{{t "result.top.rank" rank=rank}}</div>
+            <div class="result-images">
+              {{#each images}}
+                <a class="result-image-link" href="{{fileUrl}}" target="_blank" rel="noopener noreferrer">
+                  <img src="{{thumbnailUrl}}" alt="{{title}}" />
+                </a>
+              {{/each}}
+            </div>
+            <dl class="result-winner-details">
+              <div>
+                <dt>{{t "result.top.author"}}</dt>
+                <dd><a href="{{creatorUrl}}" target="_blank" rel="noopener noreferrer">{{creator}}</a></dd>
+              </div>
+              <div>
+                <dt>{{t "result.top.score"}}</dt>
+                <dd>{{score}}</dd>
+              </div>
+            </dl>
+          </li>
+        {{/each}}
+      </ol>
+    </section>
+  {{/if}}
+
   <dl class="details">
     <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
     <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>

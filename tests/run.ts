@@ -17,6 +17,7 @@ import "./web/oauth-session.test.js";
 import "./web/oauth-http.test.js";
 import "./web/performance-http.test.js";
 import "./web/publish-review.test.js";
+import "./web/result-leaderboard.test.js";
 import "./workflows/maintenance-publish.test.js";
 import "./workflows/post-results-maintenance.test.js";
 import "./workflows/publish-service.test.js";
