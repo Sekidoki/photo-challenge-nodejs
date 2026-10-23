@@ -31,9 +31,11 @@
 npm install
 ```
 
+若目前啟用的 npm 仍為 11.x，可使用 `npx --yes --package=npm@12.2.1 -- npm ci`，以專案要求的 npm 版本安裝。
+
 ## 快速開始
 
-Web 開發模式：
+Web 開發模式（使用 tsx 監看 TypeScript、Handlebars 與 CSS）：
 
 ```bash
 npm run dev
@@ -96,9 +98,11 @@ Late vote 的判定使用每月月初 00:00 AoE 的照片挑戰截止時間，�
 npm run check
 npm run check:test
 npm test
+npm run build
+npm run check:assets
 ```
 
-相容性狀態：本機檢查已在 Node.js `26.7.0`、npm `12.0.2` 驗證通過；Toolforge production 已在 Node.js `26.1.0`、npm `12.0.2` 驗證通過。
+相容性狀態：本機已在 Node.js `26.12.1`、npm `12.2.1` 驗證通過（2026-10-23），涵蓋型別檢查、127 項測試、建置與資產預算。既有 Toolforge production 驗證紀錄仍為 Node.js `26.1.0`、npm `12.0.2`。
 
 補充：
 - `.env` 不應進版控

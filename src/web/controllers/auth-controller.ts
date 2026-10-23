@@ -42,7 +42,7 @@ export async function finishOAuthLogin(request: Request, response: Response): Pr
 export async function logoutOAuthSession(request: Request, response: Response): Promise<void> {
   const t = createTranslator(getRequestLocale(request));
   const session = await getOAuthSession(request, response);
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   if (!session || !validateCsrfToken(session, body.csrfToken)) {
     response.status(403).send(t("auth.invalidSignOut"));
     return;

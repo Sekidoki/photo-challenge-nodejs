@@ -38,7 +38,7 @@ export async function addOrUpdateMaintainer(request: Request, response: Response
   const context = await requireManagerRequest(request, response);
   if (!context) return;
 
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   const requestedRole = body.role === "manager" ? "manager" : "maintainer";
   const requestedUserName = String(body.userName ?? "").trim();
   if (!requestedUserName) {
@@ -64,7 +64,7 @@ export async function removeMaintainerAction(request: Request, response: Respons
   const context = await requireManagerRequest(request, response);
   if (!context) return;
 
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   try {
     await removeMaintainer(context.userName, String(body.userName ?? ""));
     response.redirect("/maintainers?removed=1");
@@ -88,7 +88,7 @@ async function requireManagerRequest(request: Request, response: Response) {
     response.status(401).send(t("maintainers.error.signIn"));
     return null;
   }
-  if (!validateCsrfToken(session, (request.body as Record<string, unknown>).csrfToken)) {
+  if (!validateCsrfToken(session, ((request.body ?? {}) as Record<string, unknown>).csrfToken)) {
     response.status(403).send(t("maintainers.error.invalidRequest"));
     return null;
   }

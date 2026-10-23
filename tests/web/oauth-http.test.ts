@@ -124,6 +124,25 @@ test("OAuth HTTP routes reject an invalid CSRF token without clearing the valid 
   });
 });
 
+test("OAuth HTTP routes reject bodyless and unsupported form submissions without a server error", async () => {
+  await withOAuthHttpServer(createOAuthFetch(), async (baseUrl) => {
+    const cookies: CookieJar = new Map();
+    await completeLogin(baseUrl, cookies);
+
+    for (const route of ["/auth/logout", "/maintainers", "/maintainers/remove", "/jobs"]) {
+      for (const submission of [
+        { method: "POST" },
+        { method: "POST", headers: { "Content-Type": "text/plain" }, body: "csrfToken=wrong-token" }
+      ]) {
+        const response = await request(baseUrl, route, cookies, submission);
+        assert.equal(response.status, 403, `${route} must reject a missing CSRF token`);
+        await response.text();
+        assert(cookies.has("photo_challenge_session"));
+      }
+    }
+  });
+});
+
 test("OAuth HTTP middleware refreshes an expiring access token before serving a request", async () => {
   const oauthFetch = createOAuthFetch({ expiresIn: 1 });
   await withOAuthHttpServer(oauthFetch, async (baseUrl, calls) => {

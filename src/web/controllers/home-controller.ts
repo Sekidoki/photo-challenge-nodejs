@@ -67,7 +67,7 @@ export async function clearSavedCredentialAction(request: Request, response: Res
     response.status(404).send("Not found");
     return;
   }
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   await clearSavedCredential(String(body.name ?? "").trim());
   response.redirect("/?credentialCleared=1");
 }

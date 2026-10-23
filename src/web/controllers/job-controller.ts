@@ -133,7 +133,7 @@ async function getJobSnapshot(
 }
 
 export async function createJob(request: Request, response: Response) {
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   const locale = getRequestLocale(request);
   const t = createTranslator(locale);
   const oauthSession = await getOAuthSession(request, response);
@@ -415,7 +415,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
     return;
   }
 
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   const mode = getReviewMode(body.mode ?? request.query.mode, job) as MaintenancePublishMode;
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
@@ -512,7 +512,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
     return;
   }
 
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   const mode = getReviewMode(body.mode ?? request.query.mode, job);
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
@@ -683,7 +683,7 @@ async function resolveWebCredentials(
 async function validateWriteRequest(request: Request, response: Response): Promise<boolean> {
   if (!isOAuthConfigured()) return true;
   const session = await getOAuthSession(request, response);
-  const body = request.body as Record<string, unknown>;
+  const body = (request.body ?? {}) as Record<string, unknown>;
   return Boolean(session && validateCsrfToken(session, body.csrfToken));
 }
 

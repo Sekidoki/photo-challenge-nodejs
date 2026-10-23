@@ -11,8 +11,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:test": "tsc -p tsconfig.test.json --outDir .test-dist --noEmit false",
-    "dev": "tsx watch src/server.ts",
-    "dev:nodemon": "nodemon --watch src --ext ts,handlebars,css --exec tsx src/server.ts",
+    "dev": "tsx watch --include \"src/**/*\" src/server.ts",
     "start": "node dist/server.js",
     "check": "tsc --noEmit -p tsconfig.json",
     "check:test": "tsc --noEmit -p tsconfig.test.json",
@@ -21,22 +20,22 @@
     "report:web-vitals": "node scripts/report-web-vitals.mjs"
   },
   "dependencies": {
-    "@wikimedia/codex-design-tokens": "2.6.2",
-    "compression": "^1.8.1",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-handlebars": "^9.0.1",
+    "@wikimedia/codex-design-tokens": "2.7.0",
+    "compression": "^1.8.2",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-handlebars": "^9.0.2",
     "keytar": "^7.9.0",
     "luxon": "^3.7.2",
     "mwn": "^3.0.3",
-    "web-vitals": "^6.2.1"
+    "web-vitals": "^6.2.3"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
-    "@types/luxon": "^3.7.5",
-    "@types/node": "^26.4.0",
-    "tsx": "^4.23.12",
+    "@types/luxon": "^3.7.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "allowScripts": {

@@ -30,9 +30,11 @@ For a shared Web deployment, set `WEB_AUTH_MODE=oauth` and register a confidenti
 npm install
 ```
 
+If your active npm is still 11.x, use `npx --yes --package=npm@12.2.1 -- npm ci` to install with the required npm version.
+
 ## Quick Start
 
-Web app:
+Web development mode (watches TypeScript, Handlebars, and CSS using tsx):
 
 ```bash
 npm run dev
@@ -95,9 +97,11 @@ Useful commands:
 npm run check
 npm run check:test
 npm test
+npm run build
+npm run check:assets
 ```
 
-Compatibility status: local checks are verified on Node.js `26.7.0` with npm `12.0.2`; Toolforge production is verified on Node.js `26.1.0` with npm `12.0.2`.
+Compatibility status: local checks are verified on Node.js `26.12.1` with npm `12.2.1` (2026-10-23), including type checks, 127 tests, build, and asset budgets. The recorded Toolforge production verification remains Node.js `26.1.0` with npm `12.0.2`.
 
 Notes:
 - keep `.env` out of version control
