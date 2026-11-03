@@ -1,0 +1,12 @@
+<section class="publish-safety-summary {{#if context.isLive}}publish-safety-summary-live{{else}}publish-safety-summary-sandbox{{/if}}" aria-labelledby="{{headingId}}">
+  <h2 id="{{headingId}}">{{t "safety.heading"}}</h2>
+  <dl class="publish-safety-grid">
+    <div><dt>{{t "common.challenge"}}</dt><dd>{{challenge}}</dd></div>
+    <div><dt>{{t "common.mode"}}</dt><dd><strong>{{context.modeLabel}}</strong></dd></div>
+    <div><dt>{{t "common.account"}}</dt><dd><code>{{context.accountName}}</code></dd></div>
+    <div><dt>{{t "common.wiki"}}</dt><dd>{{context.wikiLabel}}</dd></div>
+    <div><dt>{{t "safety.targetCount"}}</dt><dd>{{context.targetCount}}</dd></div>
+  </dl>
+  <p>{{#if context.isLive}}{{t "safety.liveWarning"}}{{else}}{{t "safety.sandboxWarning"}}{{/if}}</p>
+  <p class="mode-control"><a class="button-link button-quiet" data-mode-switch {{#if preserveSelections}}data-preserve-selections{{/if}} data-mode-message="{{t "publishReview.modeChanged" mode=alternateModeLabel}}" href="{{alternateModeUrl}}">{{t "publishReview.switch" mode=alternateModeLabel}}</a></p>
+</section>

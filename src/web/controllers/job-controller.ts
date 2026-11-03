@@ -35,8 +35,29 @@ import { recordOperationalEvent } from "../../infra/operational-events.js";
 import type { PublishAuditContext } from "../../infra/publish-audit.js";
 import { isJobOwnedBy } from "../job-access.js";
 import { loadResultLeaderboard } from "../result-leaderboard.js";
+import { createFlash, readFlash, type FlashLink } from "../flash.js";
+import {
+  buildRetryUrl,
+  buildWorkflowSteps,
+  failureHint,
+  toJobStatusView,
+  workflowStageForJob
+} from "../view-helpers.js";
 
 const activePublishOperations = new Set<string>();
+const COMMONS_WIKI_ROOT = "https://commons.wikimedia.org/wiki";
+
+function isChecked(value: unknown): boolean {
+  const raw = Array.isArray(value) ? value[value.length - 1] : value;
+  return raw === "on" || raw === "true";
+}
+
+function toCommonsLinks(titles: string[]): FlashLink[] {
+  return [...new Set(titles)].map((title) => ({
+    title,
+    url: `${COMMONS_WIKI_ROOT}/${encodeURIComponent(title.replace(/ /g, "_")).replace(/%2F/g, "/").replace(/%3A/g, ":")}`
+  }));
+}
 
 function parseSubmissionWindow(body: Record<string, unknown>) {
   const startsAt = String(body.submissionStart ?? "").trim();
@@ -53,6 +74,7 @@ function validateHomeFields(body: Record<string, unknown>, oauthRequired: boolea
   if (!String(body.challenge ?? "").trim()) errors.challenge = t("home.error.challengeRequired");
   if (!oauthRequired && !String(body.name ?? "").trim()) errors.name = t("home.error.nameRequired");
   if (!oauthRequired && !hasSavedCredential && !String(body.botPassword ?? "")) errors.botPassword = t("home.error.passwordRequired");
+  if (String(body.publishMode ?? "") === "live" && !isChecked(body.confirmLive)) errors.confirmLive = t("home.error.liveAckRequired");
   const start = String(body.submissionStart ?? "").trim();
   const end = String(body.submissionEnd ?? "").trim();
   if (action === "create-voting" && Boolean(start) !== Boolean(end)) {
@@ -243,11 +265,19 @@ export async function renderJobProgress(request: Request, response: Response) {
   }
 
   const coreArtifacts = job.status === "completed" ? await loadCoreArtifacts(job.id, job.action, undefined, t) : [];
+  const stage = workflowStageForJob(job);
 
   response.render("progress", {
-    title: `${t("progress.title")} ${job.id}`,
+    title: `${t("progress.title")} · ${job.challenge}`,
     job,
+    ...toJobStatusView(job, t),
     jobActionLabel: formatActionLabel(job.action, t),
+    workflowSteps: buildWorkflowSteps(stage.stage, t, stage.failed),
+    isFailed: job.status === "failed",
+    isCompleted: job.status === "completed",
+    isTerminal: job.status === "failed" || job.status === "completed",
+    failureHint: failureHint(job.errorMessage, t),
+    retryUrl: buildRetryUrl(job),
     coreArtifacts
   });
 }
@@ -260,7 +290,11 @@ export async function getJobStatus(request: Request, response: Response) {
     return;
   }
 
-  response.json(job);
+  response.json({
+    ...job,
+    ...toJobStatusView(job, t),
+    failureHint: job.status === "failed" ? failureHint(job.errorMessage, t) : ""
+  });
 }
 
 export async function renderJobResult(request: Request, response: Response) {
@@ -274,7 +308,7 @@ export async function renderJobResult(request: Request, response: Response) {
   const artifacts = await listArtifacts(job.id);
   const { coreArtifacts, otherGeneratedFiles } = classifyGeneratedArtifacts(artifacts.generated, job.action, t);
   const reviewMode = getReviewMode(request.query.mode, job);
-  const notice = typeof request.query.notice === "string" ? request.query.notice : null;
+  const notice = readFlash(request.query.notice);
   const canPublishReview = job.action === "create-voting" || isVoteCountingAction(job.action);
   const hasMaintenanceReview = job.action === "post-results-maintenance";
   const leaderboard = isVoteCountingAction(job.action)
@@ -282,8 +316,10 @@ export async function renderJobResult(request: Request, response: Response) {
     : [];
 
   response.render("result", {
-    title: `${t("result.title")} ${job.id}`,
+    title: `${t("result.title")} · ${job.challenge}`,
     job,
+    ...toJobStatusView(job, t),
+    workflowSteps: buildWorkflowSteps("review", t, job.status === "failed"),
     jobActionLabel: formatActionLabel(job.action, t),
     coreArtifacts,
     leaderboard,
@@ -320,24 +356,29 @@ export async function renderPublishReview(request: Request, response: Response) 
       t
     );
 
+    const isLive = mode === "live";
+    const canPublish = !(isLive && review.warning);
     response.render("publish-review", {
-      title: `${t("publishReview.title")} ${job.id}`,
+      title: `${t("publishReview.title")} · ${job.challenge}`,
       job,
+      workflowSteps: buildWorkflowSteps("publish", t),
       jobActionLabel: formatActionLabel(job.action, t),
+      canPublish,
+      requiresAck: isLive && canPublish,
       reviewEntries: review.entries,
       reviewMode: mode,
       alternateMode: mode === "sandbox" ? "live" : "sandbox",
       alternateModeLabel: t(`mode.${mode === "sandbox" ? "live" : "sandbox"}`),
       alternateModeUrl: `/jobs/${job.id}/publish-review?mode=${mode === "sandbox" ? "live" : "sandbox"}`,
       reviewWarning: review.warning,
-      reviewNotice: typeof request.query.notice === "string" ? request.query.notice : null,
+      reviewNotice: readFlash(request.query.notice),
       publishContext: buildPublishContext(credentials?.name ?? loginName, mode, review.entries.length, t)
     });
   } catch (error) {
     if (isCommonsLoginError(error)) {
       const jobId = getRouteId(request.params.id);
       const mode = typeof request.query.mode === "string" ? request.query.mode : "sandbox";
-      response.redirect(`/jobs/${jobId}/result?notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}&mode=${encodeURIComponent(mode)}`);
+      response.redirect(`/jobs/${jobId}/result?notice=${createFlash(toUserFacingCommonsErrorMessage(error), { tone: "error" })}&mode=${encodeURIComponent(mode)}`);
       return;
     }
 
@@ -355,7 +396,7 @@ export async function renderMaintenanceReview(request: Request, response: Respon
     }
 
     if (job.action !== "post-results-maintenance") {
-      response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.standardMaintenanceView"))}`);
+      response.redirect(`/jobs/${job.id}/result?notice=${createFlash(t("publish.error.standardMaintenanceView"), { tone: "error" })}`);
       return;
     }
 
@@ -375,8 +416,10 @@ export async function renderMaintenanceReview(request: Request, response: Respon
     );
 
     response.render("maintenance-review", {
-      title: `${t("maintenanceReview.title")} ${job.id}`,
+      title: `${t("maintenanceReview.title")} · ${job.challenge}`,
       job,
+      workflowSteps: buildWorkflowSteps("publish", t),
+      requiresAck: mode === "live" && review.canPublish,
       jobActionLabel: formatActionLabel(job.action, t),
       overview: review.overview,
       reviewEntries: review.entries,
@@ -386,7 +429,7 @@ export async function renderMaintenanceReview(request: Request, response: Respon
       alternateModeLabel: t(`mode.${mode === "sandbox" ? "live" : "sandbox"}`),
       alternateModeUrl: `/jobs/${job.id}/maintenance-review?mode=${mode === "sandbox" ? "live" : "sandbox"}`,
       reviewWarning: review.warning,
-      reviewNotice: typeof request.query.notice === "string" ? request.query.notice : null,
+      reviewNotice: readFlash(request.query.notice),
       canPublish: review.canPublish,
       publishContext: buildPublishContext(credentials?.name ?? loginName, mode, review.entries.length, t)
     });
@@ -394,7 +437,7 @@ export async function renderMaintenanceReview(request: Request, response: Respon
     if (isCommonsLoginError(error)) {
       const jobId = getRouteId(request.params.id);
       const mode = typeof request.query.mode === "string" ? request.query.mode : "sandbox";
-      response.redirect(`/jobs/${jobId}/result?notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}&mode=${encodeURIComponent(mode)}`);
+      response.redirect(`/jobs/${jobId}/result?notice=${createFlash(toUserFacingCommonsErrorMessage(error), { tone: "error" })}&mode=${encodeURIComponent(mode)}`);
       return;
     }
 
@@ -411,7 +454,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   }
 
   if (job.action !== "post-results-maintenance") {
-    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.maintenanceUnsupported"))}`);
+    response.redirect(`/jobs/${job.id}/result?notice=${createFlash(t("publish.error.maintenanceUnsupported"), { tone: "error" })}`);
     return;
   }
 
@@ -419,12 +462,16 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   const mode = getReviewMode(body.mode ?? request.query.mode, job) as MaintenancePublishMode;
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.signInAgain"))}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("publish.error.signInAgain"), { tone: "error" })}`);
+    return;
+  }
+  if (mode === "live" && !isChecked(body.confirmTargets)) {
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("publish.error.ackRequired"), { tone: "error" })}`);
     return;
   }
   const selectedIds = normalizeSelectedValues(body.selected);
   if (selectedIds.length === 0) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.selectMaintenance"))}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("publish.error.selectMaintenance"), { tone: "error" })}`);
     return;
   }
 
@@ -433,20 +480,20 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
   const generatedFiles = await loadGeneratedFiles(job.id);
   const planFile = generatedFiles.find((artifact) => artifact.name.endsWith("_maintenance_plan.json"));
   if (!planFile) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("maintenance.warning.noPlan"))}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("maintenance.warning.noPlan"), { tone: "error" })}`);
     return;
   }
 
   const planResult = parseMaintenancePlanResult(planFile.content);
   if (!planResult.ok) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(planResult.error)}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(planResult.error, { tone: "error" })}`);
     return;
   }
 
   const entries = buildMaintenancePublishEntriesFromPlan(planResult.plan, loginName, mode);
   const selectedEntries = entries.filter((entry) => selectedIds.includes(entry.id));
   if (selectedEntries.length === 0) {
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.noneSelected"))}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("publish.error.noneSelected"), { tone: "error" })}`);
     return;
   }
 
@@ -467,7 +514,7 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
     });
   } catch (error) {
     recordPublishAuthenticationFailure(job, mode, credentials);
-    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
+    response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(toUserFacingCommonsErrorMessage(error), { tone: "error" })}`);
     return;
   }
 
@@ -489,11 +536,11 @@ export async function publishMaintenanceOutputs(request: Request, response: Resp
       : []
   );
   const skipped = result.skippedTotal > 0 ? t("publish.notice.skipped", { count: result.skippedTotal }) : "";
-  response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${encodeURIComponent(t("publish.notice.maintenancePublished", {
+  response.redirect(`/jobs/${job.id}/maintenance-review?mode=${mode}&notice=${createFlash(t("publish.notice.maintenancePublished", {
     count: result.publishedTotal,
     mode: t(`mode.${mode}`),
     skipped
-  }))}`);
+  }), { tone: "success", links: toCommonsLinks(selectedEntries.map((entry) => entry.targetTitle)) })}`);
   } finally {
     activePublishOperations.delete(operationKey);
   }
@@ -508,7 +555,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
   }
 
   if (job.action !== "create-voting" && !isVoteCountingAction(job.action)) {
-    response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.error.workflowUnsupported"))}`);
+    response.redirect(`/jobs/${job.id}/result?notice=${createFlash(t("publish.error.workflowUnsupported"), { tone: "error" })}`);
     return;
   }
 
@@ -516,7 +563,11 @@ export async function publishJobOutputs(request: Request, response: Response) {
   const mode = getReviewMode(body.mode ?? request.query.mode, job);
   const credentials = await resolveWebCredentials(request, response, job);
   if (!credentials || !(await validateWriteRequest(request, response))) {
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(t("publish.error.signInAgain"))}`);
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${createFlash(t("publish.error.signInAgain"), { tone: "error" })}`);
+    return;
+  }
+  if (mode === "live" && !isChecked(body.confirmTargets)) {
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${createFlash(t("publish.error.ackRequired"), { tone: "error" })}`);
     return;
   }
   const loginName = credentials.name;
@@ -524,7 +575,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
   const generatedFiles = await loadGeneratedFiles(job.id);
   const artifacts = buildPublishableArtifacts({ ...job, loginName }, generatedFiles, mode);
   if (artifacts.length === 0) {
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(t("review.warning.noFiles"))}`);
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${createFlash(t("review.warning.noFiles"), { tone: "error" })}`);
     return;
   }
 
@@ -545,7 +596,7 @@ export async function publishJobOutputs(request: Request, response: Response) {
     });
   } catch (error) {
     recordPublishAuthenticationFailure(job, mode, credentials);
-    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${encodeURIComponent(toUserFacingCommonsErrorMessage(error))}`);
+    response.redirect(`/jobs/${job.id}/publish-review?mode=${mode}&notice=${createFlash(toUserFacingCommonsErrorMessage(error), { tone: "error" })}`);
     return;
   }
 
@@ -564,10 +615,10 @@ export async function publishJobOutputs(request: Request, response: Response) {
       : []
   );
 
-  response.redirect(`/jobs/${job.id}/result?notice=${encodeURIComponent(t("publish.notice.pagesPublished", {
+  response.redirect(`/jobs/${job.id}/result?notice=${createFlash(t("publish.notice.pagesPublished", {
     count: publishedCount,
     mode: t(`mode.${mode}`)
-  }))}`);
+  }), { tone: "success", links: toCommonsLinks(artifacts.map((artifact) => artifact.targetTitle)) })}`);
   } finally {
     activePublishOperations.delete(operationKey);
   }

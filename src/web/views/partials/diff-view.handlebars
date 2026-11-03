@@ -1,0 +1,51 @@
+{{#if entry.isSingleColumn}}
+  <div class="diff-single" role="region" aria-label="{{t "publishReview.diffFor" target=entry.targetTitle}}" tabindex="0">
+    <p class="diff-single-head">{{#if (eq entry.status "unknown")}}{{t "publishReview.notLoadedPreview"}}{{else}}{{t "publishReview.newPagePreview"}}{{/if}}</p>
+    <ol class="code-lines">
+      {{#each entry.diffRows}}
+        {{#if isSkip}}
+          <li class="code-line code-line-skip">{{nextText}}</li>
+        {{else}}
+          <li class="code-line"><span class="diff-line-no" aria-hidden="true">{{nextLineNumber}}</span><pre class="diff-line-text">{{nextText}}</pre></li>
+        {{/if}}
+      {{/each}}
+    </ol>
+  </div>
+{{else}}
+  {{#if entry.firstDifferenceLine}}
+    <div class="diff-tools">
+      <button type="button" class="button-quiet button-small" data-first-difference>{{t "publishReview.firstDifference"}}</button>
+      <label class="checkbox-row"><input type="checkbox" data-changes-only /> <span>{{t "publishReview.changesOnly"}}</span></label>
+    </div>
+  {{/if}}
+  <div class="diff-table-wrap" role="table" aria-label="{{t "publishReview.diffFor" target=entry.targetTitle}}">
+    <div class="diff-table-head" role="row">
+      <span role="columnheader">{{t "publishReview.currentTarget"}}</span>
+      <span role="columnheader">{{t "publishReview.generatedOutput"}}{{#if entry.firstDifferenceLine}} {{t "publishReview.fromLine" line=entry.firstDifferenceLine}}{{/if}}</span>
+    </div>
+    <div class="diff-table" role="rowgroup">
+      {{#each entry.diffRows}}
+        {{#if isSkip}}
+          <div class="diff-row diff-row-skip" data-diff-kind="skip" role="row">
+            <div class="diff-cell diff-cell-skip" role="cell" aria-colspan="2">{{nextText}}</div>
+          </div>
+        {{else}}
+          <div class="diff-row diff-row-{{kind}}" data-diff-kind="{{kind}}" role="row">
+            <div class="diff-cell diff-cell-current" role="cell">
+              <span class="diff-cell-label" aria-hidden="true">{{t "publishReview.currentTarget"}}</span>
+              <span class="diff-line-no" aria-hidden="true">{{currentLineNumber}}</span>
+              <span class="diff-marker" aria-hidden="true">{{#if isRemove}}−{{else if isChange}}−{{/if}}</span>
+              <pre class="diff-line-text">{{#unless isSame}}{{#if currentText}}<span class="visually-hidden">{{#if isRemove}}{{t "review.diff.removed"}}{{else}}{{t "review.diff.changedLabel"}}{{/if}}: </span>{{/if}}{{/unless}}{{currentText}}</pre>
+            </div>
+            <div class="diff-cell diff-cell-next" role="cell">
+              <span class="diff-cell-label" aria-hidden="true">{{t "publishReview.generatedOutput"}}</span>
+              <span class="diff-line-no" aria-hidden="true">{{nextLineNumber}}</span>
+              <span class="diff-marker" aria-hidden="true">{{#if isAdd}}+{{else if isChange}}+{{/if}}</span>
+              <pre class="diff-line-text">{{#unless isSame}}{{#if nextText}}<span class="visually-hidden">{{#if isAdd}}{{t "review.diff.added"}}{{else}}{{t "review.diff.changedLabel"}}{{/if}}: </span>{{/if}}{{/unless}}{{nextText}}</pre>
+            </div>
+          </div>
+        {{/if}}
+      {{/each}}
+    </div>
+  </div>
+{{/if}}

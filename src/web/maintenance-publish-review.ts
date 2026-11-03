@@ -9,7 +9,7 @@ import { buildDiffSummaryText } from "./standard-publish-review.js";
 import { createTranslator, type Translator } from "./i18n.js";
 
 export type MaintenancePublishReviewEntry = MaintenancePublishEntry & {
-  status: "new" | "same" | "changed";
+  status: "new" | "same" | "changed" | "unknown";
   statusLabel: string;
   summary: string;
   diffSummary: string;
@@ -88,14 +88,14 @@ export async function buildMaintenancePublishReview(
       overview: overviewWithLinks,
       entries: entries.map((entry) => ({
         ...entry,
-        status: "changed",
-        statusLabel: t("review.status.ready"),
+        status: "unknown",
+        statusLabel: t("review.status.unknown"),
         summary: `${entry.liveTargetTitle} -> ${entry.targetTitle}`,
         diffSummary: t("maintenance.diff.signIn"),
         selected: selectedIds.length === 0 || selectedIds.includes(entry.id)
       })),
       publishHistory,
-      warning: t("maintenance.warning.signIn"),
+      warning: t("maintenance.warning.signIn", { name: loginName || t("common.unknown") }),
       canPublish: false
     };
   }

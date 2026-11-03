@@ -1,0 +1,1 @@
+<ol class="workflow-steps" aria-label="{{t "workflow.label"}}" data-workflow-steps>{{#each steps}}<li class="{{#if isComplete}}is-complete{{/if}}{{#if isFailed}}is-failed{{/if}}"{{#if isCurrent}} aria-current="step"{{/if}}{{#if isFailed}} aria-current="step"{{/if}}>{{label}}{{#if suffix}}<span class="visually-hidden">{{suffix}}</span>{{/if}}</li>{{/each}}</ol>

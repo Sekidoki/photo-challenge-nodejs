@@ -1,7 +1,13 @@
 <section class="panel">
   <h1>{{t "result.title"}}</h1>
-  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li class="is-complete">{{t "workflow.run"}}</li><li aria-current="step">{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
-  <p class="lede">{{t "result.lede" id=job.id status=job.status}}</p>
+  {{> workflow-steps steps=workflowSteps}}
+  {{> flash-notice notice=publishNotice}}
+
+  <dl class="details">
+    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
+    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
+    <div><dt>{{t "status.label"}}</dt><dd>{{statusLabel}}</dd></div>
+  </dl>
 
   {{#if leaderboard.length}}
     <section class="result-leaderboard" aria-labelledby="result-leaderboard-heading">
@@ -9,23 +15,30 @@
       <ol class="result-ranking">
         {{#each leaderboard}}
           <li class="result-ranking-item">
-            <div class="result-rank">{{t "result.top.rank" rank=rank}}</div>
+            <p class="result-rank">{{t "result.top.rank" rank=rank}}</p>
             <div class="result-images">
               {{#each images}}
                 <a class="result-image-link" href="{{fileUrl}}" target="_blank" rel="noopener noreferrer">
-                  <img src="{{thumbnailUrl}}" alt="{{title}}" />
+                  <img src="{{thumbnailUrl}}" alt="{{title}}" width="480" height="360" loading="lazy" decoding="async" />
+                  <span class="visually-hidden">({{t "accessibility.opensNewTab"}})</span>
                 </a>
               {{/each}}
             </div>
             <dl class="result-winner-details">
               <div>
                 <dt>{{t "result.top.author"}}</dt>
-                <dd><a href="{{creatorUrl}}" target="_blank" rel="noopener noreferrer">{{creator}}</a></dd>
+                <dd><a href="{{creatorUrl}}" target="_blank" rel="noopener noreferrer">{{creator}}<span class="visually-hidden"> ({{t "accessibility.opensNewTab"}})</span></a></dd>
               </div>
               <div>
                 <dt>{{t "result.top.score"}}</dt>
                 <dd>{{score}}</dd>
               </div>
+              {{#if support}}
+                <div>
+                  <dt>{{t "result.top.support"}}</dt>
+                  <dd>{{support}}</dd>
+                </div>
+              {{/if}}
             </dl>
           </li>
         {{/each}}
@@ -33,101 +46,63 @@
     </section>
   {{/if}}
 
-  <dl class="details">
-    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div>
-  </dl>
-
-  {{#if publishNotice}}
-    <div class="notice" role="status">{{publishNotice}}</div>
-  {{/if}}
-
   {{#if canPublishReview}}
-    <section class="publish-review-cta">
-      <div>
-        <h2>{{t "publishReview.title"}}</h2>
-        <p class="lede">{{t "result.publishCopy"}}</p>
-      </div>
-      <div class="actions">
-        <a href="{{publishReviewUrl}}">{{t "result.reviewPublish" mode=publishModeLabel}}</a>
-      </div>
-    </section>
+    <div class="next-step">
+      <a class="button-link" href="{{publishReviewUrl}}">{{t "result.reviewPublish" mode=publishModeLabel}}</a>
+    </div>
   {{else}}
     {{#if hasMaintenanceReview}}
-      <section class="publish-review-cta">
-        <div>
-          <h2>{{t "maintenanceReview.title"}}</h2>
-          <p class="lede">{{t "result.maintenanceCopy"}}</p>
-        </div>
-        <div class="actions">
-          <a href="{{maintenanceReviewUrl}}">{{t "result.openMaintenance"}}</a>
-        </div>
-      </section>
-    {{else}}
-      <section class="publish-review-cta">
-        <div>
-          <h2>{{t "result.dryRunHeading"}}</h2>
-          <p class="lede">{{t "result.dryRunCopy"}}</p>
-        </div>
-      </section>
+      <div class="next-step">
+        <a class="button-link" href="{{maintenanceReviewUrl}}">{{t "result.openMaintenance"}}</a>
+        <p class="next-step-copy">{{t "result.maintenanceCopy"}}</p>
+      </div>
     {{/if}}
   {{/if}}
 
-  <h2>{{t "result.core"}}</h2>
-  {{#if coreArtifacts.length}}
-    <div class="artifact-grid">
-      {{#each coreArtifacts}}
-        <article class="artifact-card artifact-card-{{type}}">
-          <p class="artifact-kicker">{{label}}</p>
-          <h3><code>{{name}}</code></h3>
-          <p class="artifact-copy">{{description}}</p>
-          <div class="artifact-actions">
-            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
-            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-          </div>
-        </article>
-      {{/each}}
-    </div>
-  {{else}}
-    <p>{{t "result.noCore"}}</p>
-  {{/if}}
+  <section aria-labelledby="core-heading">
+    <h2 id="core-heading">{{t "result.core"}}</h2>
+    {{#if coreArtifacts.length}}
+      <ul class="artifact-list">
+        {{#each coreArtifacts}}
+          <li>
+            <span class="artifact-name"><strong>{{label}}</strong><code>{{name}}</code><span class="artifact-copy">{{description}}</span></span>
+            <span class="link-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></span>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="empty-state">{{t "result.noCore"}}</p>
+    {{/if}}
+  </section>
 
-  <h2>{{t "result.other"}}</h2>
-  {{#if generatedFiles.length}}
-    <ul class="artifact-list">
-      {{#each generatedFiles}}
-        <li>
-          <code>{{name}}</code>
-          <span class="artifact-actions">
-            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
-            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-          </span>
-        </li>
-      {{/each}}
-    </ul>
-  {{else}}
-    <p>{{t "result.noOther"}}</p>
-  {{/if}}
+  <section aria-labelledby="other-heading">
+    <h2 id="other-heading">{{t "result.other"}}</h2>
+    {{#if generatedFiles.length}}
+      <ul class="artifact-list">
+        {{#each generatedFiles}}
+          <li><code>{{name}}</code><span class="link-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></span></li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="empty-state">{{t "result.noOther"}}</p>
+    {{/if}}
+  </section>
 
-  <h2>{{t "result.logs"}}</h2>
-  {{#if logFiles.length}}
-    <ul class="artifact-list">
-      {{#each logFiles}}
-        <li>
-          <code>{{name}}</code>
-          <span class="artifact-actions">
-            <a href="{{previewUrl}}">{{t "common.preview"}}</a>
-            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-          </span>
-        </li>
-      {{/each}}
-    </ul>
-  {{else}}
-    <p>{{t "result.noLogs"}}</p>
-  {{/if}}
+  <section aria-labelledby="logs-heading">
+    <h2 id="logs-heading">{{t "result.logs"}}</h2>
+    {{#if logFiles.length}}
+      <ul class="artifact-list">
+        {{#each logFiles}}
+          <li><code>{{name}}</code><span class="link-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></span></li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="empty-state">{{t "result.noLogs"}}</p>
+    {{/if}}
+    <p class="output-path"><span>{{t "common.output"}}</span> <code>{{job.outputDir}}</code></p>
+  </section>
 
-  <div class="actions">
+  <div class="link-actions page-exit">
     <a href="/jobs/{{job.id}}">{{t "result.backProgress"}}</a>
     <a href="/">{{t "common.startAnother"}}</a>
   </div>

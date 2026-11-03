@@ -11,17 +11,17 @@
     <script src="/static/web-vitals/web-vitals.iife.js?v=6.2.3" defer></script>
     <script src="/static/rum.js?v={{assetVersion}}" defer></script>
   </head>
-  <body>
+  <body data-dismiss-label="{{t "notice.dismiss"}}">
     <a class="skip-link" href="#main-content">{{t "accessibility.skipToContent"}}</a>
     <header class="site-header">
       <div class="site-header-inner">
         <a class="site-brand" href="/">{{t "app.name"}}</a>
         <div class="site-header-tools">
           <nav class="language-switcher" aria-label="{{t "language.label"}}">
-            <a href="{{languageLinks.en}}" lang="en" hreflang="en">{{t "language.english"}}</a>
-            <span aria-hidden="true">·</span>
-            <a href="{{languageLinks.zhTW}}" lang="zh-TW" hreflang="zh-TW">{{t "language.traditionalChinese"}}</a>
+            <a href="{{languageLinks.en}}" lang="en" hreflang="en"{{#if (eq locale "en")}} aria-current="true"{{/if}}>{{t "language.english"}}</a>
+            <a href="{{languageLinks.zhTW}}" lang="zh-TW" hreflang="zh-TW"{{#if (eq locale "zh-TW")}} aria-current="true"{{/if}}>{{t "language.traditionalChinese"}}</a>
           </nav>
+          {{#if oauthConfigured}}
           <nav class="site-account" aria-label="{{t "account.navigation"}}">
           {{#if oauthUser}}
             <span>{{t "account.signedInAs" name=oauthUser.name}}</span>
@@ -30,17 +30,21 @@
             {{/if}}
             <form method="post" action="/auth/logout">
               <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
-              <button type="submit" class="button-quiet">{{t "account.signOut"}}</button>
+              <button type="submit" class="button-quiet button-small">{{t "account.signOut"}}</button>
             </form>
-          {{else if oauthConfigured}}
-            <a class="button-link" href="/auth/login">{{t "account.signIn"}}</a>
+          {{else}}
+            <a href="/auth/login">{{t "account.signIn"}}</a>
           {{/if}}
           </nav>
+          {{/if}}
         </div>
       </div>
     </header>
     <main class="shell" id="main-content" tabindex="-1">
       {{{body}}}
     </main>
+    <footer class="site-footer">
+      <a href="https://github.com/Sekidoki/photo-challenge-nodejs/issues/new/choose" target="_blank" rel="noopener noreferrer">{{t "home.footer.reportIssue"}}<span class="visually-hidden"> ({{t "accessibility.opensNewTab"}})</span></a>
+    </footer>
   </body>
 </html>

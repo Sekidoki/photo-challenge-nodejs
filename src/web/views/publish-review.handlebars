@@ -1,103 +1,56 @@
 <section class="panel panel-wide">
   <div class="panel-header">
-    <div>
-      <h1>{{t "publishReview.title"}}</h1>
-      <p class="lede">{{t "publishReview.lede" mode=publishContext.modeLabel}}</p>
-    </div>
-    <div class="actions">
-      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
-    </div>
+    <h1>{{t "publishReview.title"}}</h1>
+    <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
   </div>
-  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li class="is-complete">{{t "workflow.run"}}</li><li class="is-complete">{{t "workflow.review"}}</li><li aria-current="step">{{t "workflow.publish"}}</li></ol></nav>
+  {{> workflow-steps steps=workflowSteps}}
+  <p class="lede">{{t "publishReview.lede" mode=publishContext.modeLabel}}</p>
 
-  <dl class="details">
-    <div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div>
-    <div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div>
-    <div><dt>{{t "publishReview.mode"}}</dt><dd>{{publishContext.modeLabel}}</dd></div>
-  </dl>
+  {{> flash-notice notice=reviewNotice}}
+  {{#if reviewWarning}}<div class="alert" role="alert">{{reviewWarning}}</div>{{/if}}
 
-  <aside class="publish-safety-summary {{#if publishContext.isLive}}publish-safety-summary-live{{else}}publish-safety-summary-sandbox{{/if}}" aria-labelledby="publish-safety-title">
-    <h2 id="publish-safety-title">{{t "safety.heading"}}</h2>
-    <dl class="publish-safety-grid">
-      <div><dt>{{t "common.account"}}</dt><dd><code>{{publishContext.accountName}}</code></dd></div>
-      <div><dt>{{t "common.wiki"}}</dt><dd>{{publishContext.wikiLabel}}</dd></div>
-      <div><dt>{{t "common.mode"}}</dt><dd><strong>{{publishContext.modeLabel}}</strong></dd></div>
-      <div><dt>{{t "safety.targetCount"}}</dt><dd>{{publishContext.targetCount}}</dd></div>
-    </dl>
-    <p>{{#if publishContext.isLive}}{{t "safety.liveWarning"}}{{else}}{{t "safety.sandboxWarning"}}{{/if}}</p>
-    <div class="mode-control"><strong>{{t "publishReview.currentMode" mode=publishContext.modeLabel}}</strong><a data-mode-switch data-mode-message="{{t "publishReview.modeChanged" mode=alternateModeLabel}}" href="{{alternateModeUrl}}">{{t "publishReview.switch" mode=alternateModeLabel}}</a></div>
-  </aside>
-
-  {{#if reviewNotice}}
-    <div class="notice" role="status">{{reviewNotice}}</div>
-  {{/if}}
-
-  {{#if reviewWarning}}
-    <div class="alert" role="alert">{{reviewWarning}}</div>
-  {{/if}}
+  {{> safety-summary context=publishContext challenge=job.challenge headingId="publish-safety-title" alternateModeLabel=alternateModeLabel alternateModeUrl=alternateModeUrl}}
 
   <h2>{{t "common.targets"}}</h2>
   {{#if reviewEntries.length}}
     <div class="publish-review-list">
       {{#each reviewEntries}}
-        <article class="publish-review-card publish-review-card-{{status}}" data-diff-card>
+        <article class="publish-review-card" data-diff-card aria-labelledby="target-{{@index}}">
           <div class="publish-review-header">
-            <div>
-              <p class="artifact-kicker">{{label}}</p>
-              <h3><code>{{fileName}}</code></h3>
-            </div>
+            <h3 id="target-{{@index}}">{{label}}</h3>
             <span class="status-pill publish-status-{{status}}">{{statusLabel}}</span>
           </div>
-
-          <p class="publish-target"><strong>{{t "publishReview.target"}}:</strong> <code>{{targetTitle}}</code></p>
+          <dl class="target-facts">
+            <div><dt>{{t "publishReview.target"}}</dt><dd><code>{{targetTitle}}</code></dd></div>
+            <div><dt>{{t "publishReview.generatedFile"}}</dt><dd><code>{{fileName}}</code> <span class="link-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></span></dd></div>
+          </dl>
           <p class="artifact-copy">{{summary}}</p>
-
-          <div class="artifact-actions">
-            <a href="{{previewUrl}}">{{t "publishReview.previewFile"}}</a>
-            <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-          </div>
-
-          <section>
-            {{#if firstDifferenceLine}}<div class="diff-tools"><button type="button" class="button-quiet" data-first-difference>{{t "publishReview.firstDifference"}}</button><label class="checkbox-row"><input type="checkbox" data-changes-only /> <span>{{t "publishReview.changesOnly"}}</span></label></div>{{/if}}
-            <div class="diff-table-wrap" role="table" aria-label="{{t "publishReview.diffFor" target=targetTitle}}">
-            <div class="diff-table-head" role="row">
-              <span role="columnheader">{{t "publishReview.currentTarget"}}</span>
-              <span role="columnheader">{{t "publishReview.generatedOutput"}}{{#if firstDifferenceLine}} {{t "publishReview.fromLine" line=firstDifferenceLine}}{{/if}}</span>
-            </div>
-            <div class="diff-table">
-              {{#each diffRows}}
-                <div class="diff-row diff-row-{{kind}}" data-diff-kind="{{kind}}" role="row">
-                  {{#unless isSkip}}<span class="diff-kind-label" role="cell" aria-colspan="2">{{#if isAdd}}{{t "review.diff.added"}}{{else if isRemove}}{{t "review.diff.removed"}}{{else if isChange}}{{t "review.diff.changedLabel"}}{{else}}{{t "review.diff.unchanged"}}{{/if}}</span>{{/unless}}
-                  {{#if isSkip}}
-                    <div class="diff-cell diff-cell-skip" role="cell">{{nextText}}</div>
-                  {{else}}
-                    <div class="diff-cell diff-cell-current" role="cell">
-                      <span class="diff-line-no">{{#if currentLineNumber}}{{currentLineNumber}}{{else}}&nbsp;{{/if}}</span>
-                      <pre class="diff-line-text">{{currentText}}</pre>
-                    </div>
-                    <div class="diff-cell diff-cell-next" role="cell">
-                      <span class="diff-line-no">{{#if nextLineNumber}}{{nextLineNumber}}{{else}}&nbsp;{{/if}}</span>
-                      <pre class="diff-line-text">{{nextText}}</pre>
-                    </div>
-                  {{/if}}
-                </div>
-              {{/each}}
-            </div>
-            </div>
-          </section>
+          {{> diff-view entry=this}}
         </article>
       {{/each}}
     </div>
 
-    <form method="post" action="/jobs/{{job.id}}/publish" class="publish-form" data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLive" account=publishContext.accountName wiki=publishContext.wikiLabel count=publishContext.targetCount}}{{else}}{{t "safety.confirmSandbox" account=publishContext.accountName count=publishContext.targetCount}}{{/if}}">
+    <form method="post" action="/jobs/{{job.id}}/publish" class="publish-bar {{#if publishContext.isLive}}publish-bar-live{{/if}}" {{#if canPublish}}data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLive" account=publishContext.accountName wiki=publishContext.wikiLabel count=publishContext.targetCount}}{{else}}{{t "safety.confirmSandbox" account=publishContext.accountName count=publishContext.targetCount}}{{/if}}"{{/if}}>
       <input type="hidden" name="csrfToken" value="{{csrfToken}}">
       <input type="hidden" name="mode" value="{{reviewMode}}">
-      <div class="actions">
-        <button type="submit" data-processing-text="{{t "common.processing"}}" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "publishReview.publish" mode=publishContext.modeLabel}}</button>
+      <p class="publish-bar-summary"><strong>{{publishContext.modeLabel}}</strong> · {{t "safety.targetCount"}} {{publishContext.targetCount}} · <code>{{publishContext.accountName}}</code></p>
+      {{#if requiresAck}}
+        <label class="checkbox-row">
+          <input type="checkbox" name="confirmTargets" value="true" required />
+          <span>{{t "safety.ackLive" count=publishContext.targetCount}}</span>
+        </label>
+      {{/if}}
+      <div class="publish-bar-actions">
+        {{#if canPublish}}
+          <button type="submit" data-processing-text="{{t "common.processing"}}" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "publishReview.publish" mode=publishContext.modeLabel count=publishContext.targetCount}}</button>
+        {{else}}
+          <button type="submit" disabled aria-describedby="publish-disabled-reason">{{t "publishReview.publish" mode=publishContext.modeLabel count=publishContext.targetCount}}</button>
+          <span id="publish-disabled-reason" class="publish-bar-reason">{{t "publishReview.liveDisabled"}}</span>
+        {{/if}}
         <a href="/jobs/{{job.id}}/result">{{t "common.cancel"}}</a>
       </div>
     </form>
   {{else}}
-    <p>{{t "publishReview.none"}}</p>
+    <p class="empty-state">{{t "publishReview.none"}}</p>
   {{/if}}
 </section>

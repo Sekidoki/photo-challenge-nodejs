@@ -13,6 +13,7 @@ type ScoredFileArtifact = {
   title?: unknown;
   creator?: unknown;
   score?: unknown;
+  support?: unknown;
   rank?: unknown;
   members?: unknown;
 };
@@ -29,6 +30,7 @@ export type ResultLeaderboardEntry = {
   creator: string;
   creatorUrl: string;
   score: number;
+  support: number | null;
   images: ResultLeaderboardImage[];
 };
 
@@ -100,6 +102,7 @@ export function parseResultLeaderboard(content: string): ResultLeaderboardEntry[
       creator,
       creatorUrl: buildCommonsUrl("User", creator),
       score,
+      support: finiteNumber(file.support),
       images
     }];
   }).slice(0, 3);

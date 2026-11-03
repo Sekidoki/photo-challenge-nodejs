@@ -1,0 +1,11 @@
+{{#if notice}}
+  <div class="{{#if (eq notice.tone "error")}}alert{{else}}notice{{/if}}" role="{{#if (eq notice.tone "error")}}alert{{else}}status{{/if}}">
+    <p>{{notice.message}}</p>
+    {{#if notice.links.length}}
+      <p class="notice-links-label">{{t "publish.notice.targets"}}</p>
+      <ul class="notice-links">
+        {{#each notice.links}}<li><a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}<span class="visually-hidden"> ({{t "accessibility.opensNewTab"}})</span></a></li>{{/each}}
+      </ul>
+    {{/if}}
+  </div>
+{{/if}}

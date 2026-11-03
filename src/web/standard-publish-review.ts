@@ -11,9 +11,11 @@ export type PublishReviewEntry = {
   targetTitle: string;
   previewUrl: string;
   downloadUrl: string;
-  status: "new" | "same" | "changed";
+  status: "new" | "same" | "changed" | "unknown";
   statusLabel: string;
   summary: string;
+  /** True when only the generated content can be shown (new page, or current content not loaded). */
+  isSingleColumn: boolean;
   firstDifferenceLine: number | null;
   diffRows: Array<{
     kind: string;
@@ -61,8 +63,8 @@ export async function buildStandardPublishReview(
 
   if (!bot) {
     return {
-      entries: toReviewEntries(job.id, artifacts, new Map(), t),
-      warning: t("review.warning.signIn")
+      entries: toReviewEntries(job.id, artifacts, null, t),
+      warning: t("review.warning.signIn", { name: loginName })
     };
   }
 
@@ -89,21 +91,40 @@ export function toStandardPublishPlan(job: JobProgress, artifact: PublishableArt
 function toReviewEntries(
   jobId: string,
   artifacts: PublishableArtifact[],
-  currentContents: Map<string, string | null>,
+  currentContents: Map<string, string | null> | null,
   t: Translator
 ): PublishReviewEntry[] {
   return artifacts.map((artifact) => {
-    const summary = summarizePublishDiff(currentContents.get(artifact.fileName) ?? null, artifact.content, t);
-    return {
+    const base = {
       label: artifact.label,
       fileName: artifact.fileName,
       targetTitle: artifact.targetTitle,
       previewUrl: `/jobs/${jobId}/artifacts/generated/${encodeURIComponent(artifact.fileName)}`,
-      downloadUrl: `/jobs/${jobId}/artifacts/generated/${encodeURIComponent(artifact.fileName)}/download`,
+      downloadUrl: `/jobs/${jobId}/artifacts/generated/${encodeURIComponent(artifact.fileName)}/download`
+    };
+    const summary = summarizePublishDiff(currentContents?.get(artifact.fileName) ?? null, artifact.content, t);
+
+    // Without the current page content we cannot tell new pages from overwrites,
+    // so never claim "new page" in that case.
+    if (!currentContents) {
+      return {
+        ...base,
+        status: "unknown" as const,
+        statusLabel: t("review.status.unknown"),
+        summary: t("review.diff.unknown", { next: summary.nextLineCount }),
+        isSingleColumn: true,
+        firstDifferenceLine: null,
+        diffRows: summary.rows
+      };
+    }
+
+    return {
+      ...base,
       status: summary.status,
       statusLabel: summary.status === "new" ? t("review.status.new") : summary.status === "same" ? t("review.status.same") : t("review.status.changed"),
       summary: buildDiffSummaryText(summary, t),
-      firstDifferenceLine: summary.firstDifferenceLine,
+      isSingleColumn: summary.status === "new",
+      firstDifferenceLine: summary.status === "new" ? null : summary.firstDifferenceLine,
       diffRows: summary.rows
     };
   });

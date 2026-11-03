@@ -1,38 +1,20 @@
 <section class="panel panel-wide">
   <div class="panel-header">
-    <div>
-      <h1>{{t "artifact.title"}}</h1>
-      <p class="lede">{{t "artifact.lede" file=fileName id=job.id}}</p>
-    </div>
-    <div class="actions">
-      <a href="{{downloadUrl}}">{{t "common.download"}}</a>
-      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
-    </div>
+    <h1>{{t "artifact.title"}}</h1>
+    <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
   </div>
+  <p class="lede"><code>{{fileName}}</code> · {{job.challenge}}</p>
 
   {{#if coreArtifacts.length}}
-    <section class="preview-nav-card">
-      <h2>{{t "artifact.core"}}</h2>
-      <p class="lede">{{t "artifact.switchCopy"}}</p>
-      <div class="preview-nav-grid">
+    <nav class="preview-nav" aria-label="{{t "artifact.core"}}">
+      <ul>
         {{#each coreArtifacts}}
-          <article class="preview-nav-item {{#if isActive}}preview-nav-item-active{{/if}}">
-            <p class="artifact-kicker">{{label}}</p>
-            <h3><code>{{name}}</code></h3>
-            <p class="artifact-copy">{{description}}</p>
-            <div class="preview-nav-actions">
-              {{#if isActive}}
-                <span class="preview-nav-current">{{t "artifact.current"}}</span>
-              {{else}}
-                <a class="preview-nav-link" href="{{previewUrl}}">{{t "artifact.open"}}</a>
-              {{/if}}
-              <a class="preview-nav-link preview-nav-link-secondary" href="{{downloadUrl}}">{{t "common.download"}}</a>
-            </div>
-          </article>
+          <li>{{#if isActive}}<span class="preview-nav-current" aria-current="page">{{label}}</span>{{else}}<a href="{{previewUrl}}">{{label}}</a>{{/if}}</li>
         {{/each}}
-      </div>
-    </section>
+      </ul>
+    </nav>
   {{/if}}
 
-  <pre class="artifact-preview"><code>{{content}}</code></pre>
+  <div class="link-actions"><a class="button-link button-quiet" href="{{downloadUrl}}">{{t "common.download"}}</a></div>
+  <pre class="artifact-preview" tabindex="0"><code>{{content}}</code></pre>
 </section>

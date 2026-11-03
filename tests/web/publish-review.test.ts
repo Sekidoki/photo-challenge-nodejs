@@ -44,7 +44,8 @@ test("buildStandardPublishReview builds review entries without live diffs when n
   ]);
 
   assert.equal(review.entries.length, 3);
-  assert.equal(review.entries.every((entry) => entry.status === "new"), true);
+  assert.equal(review.entries.every((entry) => entry.status === "unknown" && entry.isSingleColumn), true);
+  assert.equal(review.entries.some((entry) => /does not exist/.test(entry.summary)), false);
   assert.match(review.warning ?? "", /saved BotPassword/);
 });
 

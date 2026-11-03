@@ -1,20 +1,37 @@
-<section class="panel" data-progress-page data-status-url="/jobs/{{job.id}}/status" data-initial-status="{{job.status}}" data-step-prefix="{{t "progress.stepPrefix"}}" data-completed-text="{{t "progress.completedSummary"}}" data-failed-text="{{t "progress.failedSummary"}}" data-retry-text="{{t "progress.updateFailed"}}">
+<section class="panel" data-progress-page data-status-url="/jobs/{{job.id}}/status" data-initial-status="{{job.status}}" data-step-prefix="{{t "progress.stepPrefix"}}" data-completed-text="{{t "progress.completedSummary"}}" data-failed-text="{{t "progress.failedSummary"}}" data-retry-text="{{t "progress.updateFailed"}}" data-completed-suffix="{{t "workflow.completedSuffix"}}" data-failed-suffix="{{t "workflow.failedSuffix"}}">
   <h1>{{t "progress.title"}}</h1>
-  <nav aria-label="{{t "workflow.label"}}"><ol class="workflow-steps"><li class="is-complete">{{t "workflow.prepare"}}</li><li aria-current="step">{{t "workflow.run"}}</li><li>{{t "workflow.review"}}</li><li>{{t "workflow.publish"}}</li></ol></nav>
-  <p class="lede" data-progress-summary tabindex="-1">{{t "progress.lede" id=job.id status=job.status}}</p>
-  <div class="progress-card" role="progressbar" aria-label="{{t "progress.label"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{job.percent}}">
-    <div class="progress-meta"><span data-progress-step>{{t "progress.step" step=job.currentStep}}</span><span data-progress-percent>{{job.percent}}%</span></div>
-    <div class="progress-bar"><div class="progress-fill" data-progress-fill style="width: {{job.percent}}%;"></div></div>
+  {{> workflow-steps steps=workflowSteps}}
+  <p class="lede" data-progress-summary tabindex="-1">{{#if isCompleted}}{{t "progress.completedSummary"}}{{else if isFailed}}{{t "progress.failedSummary"}}{{else}}{{t "progress.lede" status=statusLabel}}{{/if}}</p>
+
+  <div class="alert failure-panel" role="alert" data-progress-error {{#unless isFailed}}hidden{{/unless}}>
+    <h2>{{t "progress.failedHeading"}}</h2>
+    <p data-progress-hint>{{failureHint}}</p>
+    <details>
+      <summary>{{t "progress.errorDetail"}}</summary>
+      <pre class="error-detail" data-progress-error-text>{{job.errorMessage}}</pre>
+    </details>
+    <p><a class="button-link" href="{{retryUrl}}">{{t "progress.retryWithSettings"}}</a></p>
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-meta" aria-hidden="true"><span data-progress-step>{{t "progress.step" step=stepLabel}}</span><span data-progress-percent>{{job.percent}}%</span></div>
+    <div class="progress-bar{{#if isFailed}} progress-bar-failed{{/if}}" role="progressbar" aria-label="{{t "progress.label"}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{job.percent}}" aria-valuetext="{{job.percent}}% · {{stepLabel}}"><div class="progress-fill" data-progress-fill style="width: {{job.percent}}%;"></div></div>
   </div>
   <p class="poll-status" data-poll-status aria-live="polite"></p>
   <div class="poll-recovery" data-poll-recovery hidden><button type="button" class="button-quiet" data-progress-retry>{{t "progress.retry"}}</button><a href="">{{t "progress.manualRefresh"}}</a></div>
-  <dl class="details"><div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div><div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div><div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div></dl>
-  <section class="progress-shortcuts" data-terminal-actions {{#unless (eq job.status "completed")}}hidden{{/unless}}>
-    <div class="panel-header"><div><h2>{{t "progress.ready"}}</h2><p class="lede">{{t "progress.readyCopy"}}</p></div><div class="actions"><a href="/jobs/{{job.id}}/result">{{t "progress.fullResult"}}</a></div></div>
-    {{#if coreArtifacts.length}}<div class="artifact-grid">{{#each coreArtifacts}}<article class="artifact-card artifact-card-{{type}}"><p class="artifact-kicker">{{label}}</p><h3><code>{{name}}</code></h3><p class="artifact-copy">{{description}}</p><div class="artifact-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></div></article>{{/each}}</div>{{/if}}
+
+  <dl class="details"><div><dt>{{t "common.challenge"}}</dt><dd>{{job.challenge}}</dd></div><div><dt>{{t "common.action"}}</dt><dd>{{jobActionLabel}}</dd></div><div><dt>{{t "common.output"}}</dt><dd><code>{{job.outputDir}}</code></dd></div></dl>
+
+  <section class="progress-shortcuts" data-terminal-actions {{#unless isCompleted}}hidden{{/unless}} aria-labelledby="progress-outputs-heading">
+    <h2 id="progress-outputs-heading">{{t "progress.ready"}}</h2>
+    {{#if coreArtifacts.length}}<ul class="artifact-list">{{#each coreArtifacts}}<li><span class="artifact-name"><strong>{{label}}</strong><code>{{name}}</code></span><span class="link-actions"><a href="{{previewUrl}}">{{t "common.preview"}}</a><a href="{{downloadUrl}}">{{t "common.download"}}</a></span></li>{{/each}}</ul>{{/if}}
+    <p><a class="button-link" href="/jobs/{{job.id}}/result">{{t "progress.fullResult"}}</a></p>
   </section>
-  <h2>{{t "progress.messages"}}</h2><ul class="messages" data-progress-messages>{{#each job.messages}}<li>{{this}}</li>{{/each}}</ul>
-  <div class="alert" role="alert" data-progress-error {{#unless job.errorMessage}}hidden{{/unless}}>{{job.errorMessage}}</div>
-  <div class="actions"><a data-result-link href="/jobs/{{job.id}}/result" {{#unless (eq job.status "completed")}}hidden{{/unless}}>{{t "progress.viewResult"}}</a><a href="/">{{t "common.startAnother"}}</a></div>
+
+  <details class="run-log" {{#unless isTerminal}}open{{/unless}}>
+    <summary>{{t "progress.messages"}}</summary>
+    <ul class="messages" data-progress-messages>{{#each job.messages}}<li>{{this}}</li>{{/each}}</ul>
+  </details>
+  <div class="link-actions page-exit"><a href="/">{{t "common.startAnother"}}</a></div>
 </section>
 <script src="/static/progress.js?v={{assetVersion}}" defer></script>

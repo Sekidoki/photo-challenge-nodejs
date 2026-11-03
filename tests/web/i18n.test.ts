@@ -43,7 +43,7 @@ test("UI locale recognizes Traditional Chinese from cookie and Accept-Language",
 
 test("message catalog translates and interpolates publish safety copy", () => {
   const t = createTranslator("zh-TW");
-  assert.equal(t("account.signedInAs", { name: "Example" }), "已登入為 Example");
+  assert.equal(t("account.signedInAs", { name: "Example" }), "帳號：Example");
   assert.match(t("safety.liveWarning"), /正式發布/);
   assert.equal(t("missing.message"), "missing.message");
 });

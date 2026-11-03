@@ -7,6 +7,7 @@ import { getOAuthConfigurationMessage, getOAuthSession, isOAuthConfigured } from
 import { createTranslator, getRequestLocale, type SupportedLocale, type Translator } from "../i18n.js";
 import { isJobOwnedBy } from "../job-access.js";
 import { recordWebVital } from "../../infra/web-vitals.js";
+import { buildRetryUrl, buildWorkflowSteps, translateStep } from "../view-helpers.js";
 
 export async function collectWebVital(request: Request, response: Response) {
   response.status(await recordWebVital(request.body) ? 204 : 400).end();
@@ -40,6 +41,7 @@ type HomeRecentJob = {
   finishedAtLabel: string;
   progressUrl: string;
   resultUrl: string;
+  reuseUrl: string;
   statusLabel?: string;
   statusCode?: string;
   statusClass?: string;
@@ -58,8 +60,38 @@ export async function renderHomePage(request: Request, response: Response) {
     success,
     error,
     locale,
-    oauthUserName: oauthSession?.userName ?? null
+    oauthUserName: oauthSession?.userName ?? null,
+    defaults: readPrefillDefaults(request.query)
   }));
+}
+
+const PREFILL_ACTIONS = new Set(["create-voting", "count-votes-and-select-winners", "post-results-maintenance"]);
+const PREFILL_MODES = new Set(["dry-run", "sandbox"]);
+const PREFILL_ENTRY_MODES = new Set(["single", "duo-coequal", "duo-reference"]);
+
+/**
+ * Accept a small, validated set of query parameters so "retry" and "reuse
+ * settings" links can refill the form. Live mode is never prefilled: it must
+ * always be chosen and acknowledged explicitly.
+ */
+function readPrefillDefaults(query: Request["query"]): Partial<HomeDefaults> {
+  const pick = (name: string) => {
+    const value = query[name];
+    const raw = Array.isArray(value) ? value[0] : value;
+    return typeof raw === "string" ? raw.trim().slice(0, 200) : "";
+  };
+  const defaults: Partial<HomeDefaults> = {};
+  const action = pick("action");
+  if (PREFILL_ACTIONS.has(action)) defaults.action = action;
+  const challenge = pick("challenge");
+  if (challenge) defaults.challenge = challenge;
+  const publishMode = pick("publishMode");
+  if (PREFILL_MODES.has(publishMode)) defaults.publishMode = publishMode;
+  const entryMode = pick("entryMode");
+  if (PREFILL_ENTRY_MODES.has(entryMode)) defaults.entryMode = entryMode;
+  const pairedChallenge = pick("pairedChallenge");
+  if (pairedChallenge) defaults.pairedChallenge = pairedChallenge;
+  return defaults;
 }
 
 export async function clearSavedCredentialAction(request: Request, response: Response) {
@@ -84,6 +116,7 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
 
   return {
     title: t("app.runner"),
+    workflowSteps: buildWorkflowSteps("prepare", t),
     error: options.error,
     fieldErrors: options.fieldErrors ?? {},
     errorSummary: Object.entries(options.fieldErrors ?? {}).map(([field, message]) => ({ field, message })),
@@ -108,7 +141,8 @@ export async function buildHomePageViewModel(options: HomePageOptions = {}) {
     credentialStore,
     oauthConfigured,
     oauthConfigurationMessage: getOAuthConfigurationMessage(),
-    recentCompletedJob: recentJobs.find((job) => job.statusCode === "completed") ?? null,
+    liveAccountName: options.oauthUserName ?? options.defaults?.name ?? savedName ?? process.env.NAME ?? "",
+    recentChallenges: [...new Set(recentJobs.map((job) => job.challenge).filter((challenge) => challenge && challenge !== "Unknown challenge"))],
     recentJobs
   };
 }
@@ -123,10 +157,11 @@ async function getRecentJobs(
     id: job.id,
     action: formatActionLabel(job.action, t),
     challenge: job.challenge,
-    currentStep: job.currentStep,
+    currentStep: translateStep(job.currentStep, t),
     finishedAtLabel: formatTimestamp(job.finishedAt, locale, t),
     progressUrl: `/jobs/${job.id}`,
     resultUrl: `/jobs/${job.id}/result`,
+    reuseUrl: buildRetryUrl(job),
     statusLabel: t(`status.${job.status}`),
     statusCode: job.status,
     statusClass: `status-${job.status}`,
@@ -138,10 +173,11 @@ async function getRecentJobs(
     id: job.id,
     action: formatActionLabel(job.action, t),
     challenge: job.challenge,
-    currentStep: job.currentStep,
+    currentStep: translateStep(job.currentStep, t),
     finishedAtLabel: formatTimestamp(job.finishedAt, locale, t),
     progressUrl: `/jobs/${job.id}`,
     resultUrl: `/jobs/${job.id}/result`,
+    reuseUrl: buildRetryUrl(job),
     statusLabel: t(`status.${job.status}`),
     statusCode: job.status,
     statusClass: `status-${job.status}`,
@@ -152,7 +188,7 @@ async function getRecentJobs(
   const merged = [...inMemoryJobs, ...persistedJobs]
     .filter((job, index, array) => array.findIndex((candidate) => candidate.id === job.id) === index)
     .sort((left, right) => right.finishedAt - left.finishedAt)
-    .slice(0, 3)
+    .slice(0, 5)
     .map(({ finishedAt, ...job }) => job);
 
   return merged;
