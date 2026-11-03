@@ -202,3 +202,19 @@ test("parseVotingPage handles the real 100 years later duo-reference voting page
   assert.equal(placeholder?.displayKind, "placeholder");
   assert.equal(placeholder?.sourceUrl, "http://memoire-net.org/article.php3?id_article=141");
 });
+
+test("parseVotingPage decodes HTML character references in voter and creator names", () => {
+  const wikiText = [
+    '===<span class="anchor" id="1">1</span>. Abandoned house===',
+    "[[File:Abandoned house.jpg|none|thumb|399px|Abandoned house]]",
+    "'''Creator:''' [[User:A&amp;B Photos|A&amp;B Photos]] '''Uploaded:''' 2026-09-03",
+    "<!-- Vote below this line -->",
+    '*{{3/3*}} -- [[User:Hardc0replayzhistory&#38;news|Hardc0replayzhistory&#38;news]] ([[User talk:Hardc0replayzhistory&#38;news|<span class="signature-talk">{{int:Talkpagelinktext}}</span>]]) 00:58, 2 October 2026 (UTC)',
+    "<!-- Vote above this line -->"
+  ].join("\n");
+
+  const parsed = parseVotingPage(wikiText);
+
+  assert.equal(parsed.votes[0]?.voter, "Hardc0replayzhistory&news");
+  assert.equal(parsed.entries[0]?.members[0]?.user, "A&B Photos");
+});

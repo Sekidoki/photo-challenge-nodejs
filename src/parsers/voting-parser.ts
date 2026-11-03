@@ -1,5 +1,6 @@
 import type { EntryMode, VotingEntry, VotingEntryMember } from "../core/models.js";
 import { repairVoteBelowMarker } from "../core/voting-wikitext.js";
+import { decodeHtmlEntities } from "../core/html-entities.js";
 
 export type VotingChallenge = {
   raw: string;
@@ -292,7 +293,7 @@ function appendCreatorLines(section: VotingSectionBuilder, line: string): void {
   }
 
   for (const match of line.matchAll(/\[\[User:([^|\]]+)/gi)) {
-    const creator = match[1]?.trim();
+    const creator = decodeHtmlEntities(match[1] ?? "").trim();
     if (creator) {
       section.creatorLines.push(creator);
     }
@@ -306,9 +307,9 @@ function parseVote(section: VotingSectionBuilder, line: string): void {
     return;
   }
 
-  const voter = line.includes("[[Special:Contributions/")
+  const voter = decodeHtmlEntities(line.includes("[[Special:Contributions/")
     ? substr(/\[\[Special:Contributions\/([^|\]]+)/, line)
-    : substr(/\[\[(?:[Uu]ser|[Bb]enutzer|[Uu]suario):([^|\]]+)/, line);
+    : substr(/\[\[(?:[Uu]ser|[Bb]enutzer|[Uu]suario):([^|\]]+)/, line)).trim();
   const normalizedLine = line.replace('<span class="signature-talk">{{int:Talkpagelinktext}}</span>', "");
   section.votes.push({
     num: section.num,

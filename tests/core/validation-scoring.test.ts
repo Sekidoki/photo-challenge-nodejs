@@ -299,3 +299,45 @@ test("countVotes scores a duo entry once while preserving both members", () => {
   assert.equal(ranked[0]?.fileName, "Outside.jpg");
   assert.deepEqual(ranked[0]?.members.map((entry) => entry.fileName), ["Outside.jpg", "Inside.jpg"]);
 });
+
+test("lookupCommonsUserInfo treats an invalid user name as unregistered", async () => {
+  const user = await lookupCommonsUserInfo(async (params) => {
+    if (params.list === "users") {
+      return { query: { users: [{ name: "Hardc0replayzhistory&#38;news", invalid: true }] } };
+    }
+    return { query: { pages: [] } };
+  }, "Hardc0replayzhistory&#38;news");
+
+  assert.equal(user?.isRegistered, false);
+});
+
+test("validateVoters lets established accounts without a registration date pass the age rule", async () => {
+  const accounts: Record<string, { editCount: number; registration: string | null }> = {
+    Aristeas: { editCount: 353621, registration: null },
+    "Hardc0replayzhistory&news": { editCount: 18, registration: "2025-03-11T21:36:38Z" }
+  };
+  const fakeBot: CommonsBot = {
+    async readPage() { throw new Error("not used"); },
+    async savePage() { throw new Error("not used"); },
+    async getCurrentUser() { return "Example"; },
+    async listPagesByPrefix() { return []; },
+    async listFileInfo() { return []; },
+    async getUserInfo(userName: string) {
+      const account = accounts[userName];
+      return account
+        ? { name: userName, ...account, isRegistered: true, isBlocked: false }
+        : { name: userName, editCount: 0, registration: null, isRegistered: false, isBlocked: false };
+    },
+    async userHasPhotoChallengeParticipation() { return false; }
+  };
+
+  const voters = await validateVoters(fakeBot, [
+    { num: 1, award: 3, voter: "Aristeas", creator: "Other", line: "*{{3/3*}} -- [[User:Aristeas|Aristeas]]", timestamp: null },
+    { num: 1, award: 3, voter: "Hardc0replayzhistory&news", creator: "Other", line: "*{{3/3*}} -- [[User:Hardc0replayzhistory&#38;news|x]]", timestamp: null }
+  ], "2026 - September - Abandoned", []);
+
+  assert.deepEqual(voters.map(({ voter, error }) => ({ voter, error })), [
+    { voter: "Aristeas", error: 0 },
+    { voter: "Hardc0replayzhistory&news", error: 4 }
+  ]);
+});

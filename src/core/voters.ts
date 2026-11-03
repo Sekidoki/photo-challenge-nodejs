@@ -2,6 +2,7 @@ import { DateTime } from "luxon";
 import type { CommonsBot } from "../services/commons-bot.js";
 import type { ParsedVote } from "../parsers/voting-parser.js";
 import type { VoterValidation } from "./validation.js";
+import { decodeHtmlEntities } from "./html-entities.js";
 
 function isNumericIp(value: string): boolean {
   return /^[0-9.]+$/.test(value);
@@ -47,8 +48,11 @@ export async function validateVoters(
       continue;
     }
 
+    // MediaWiki has no registration date for accounts created before it began
+    // recording one (around 2005), so an existing account without a date is old,
+    // not new; it passes the 10-day age rule. The edit-count rule still applies.
     const regDate = userInfo.registration ? DateTime.fromISO(userInfo.registration, { zone: "utc" }) : null;
-    const daysActive = regDate ? Math.floor(startDate.diff(regDate, "days").days) : -1;
+    const daysActive = regDate ? Math.floor(startDate.diff(regDate, "days").days) : Number.POSITIVE_INFINITY;
     const hasChallengeParticipation = entrants.has(normalizeUserName(voter));
 
     let error = 0;
@@ -83,5 +87,5 @@ export async function validateVoters(
 }
 
 function normalizeUserName(value: string): string {
-  return value.trim().replace(/_/g, " ").replace(/\s+/g, " ").toLowerCase();
+  return decodeHtmlEntities(value).trim().replace(/_/g, " ").replace(/\s+/g, " ").toLowerCase();
 }

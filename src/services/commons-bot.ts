@@ -270,7 +270,9 @@ async function requestUserInfo(
     name: user.name,
     editCount: typeof user.editcount === "number" ? user.editcount : 0,
     registration: typeof user.registration === "string" ? user.registration : null,
-    isRegistered: !Boolean(user.missing),
+    // `invalid` means the name cannot be a user name at all (e.g. it contains "#");
+    // it must never count as a registered account.
+    isRegistered: !Boolean(user.missing) && !Boolean(user.invalid),
     isBlocked: Boolean(user.blockid || user.blockedby)
   };
 }
