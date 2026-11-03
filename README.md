@@ -53,7 +53,7 @@ Toolforge Build Service uses the root `Procfile` to run the same `npm start` ent
 
 The production application is deployed at [photo-challenge.toolforge.org](https://photo-challenge.toolforge.org/) as a single-replica Toolforge `buildservice` with persistent storage mounted. It runs in OAuth mode; the public UI never exposes or falls back to BotPassword authentication.
 
-The current production baseline was built on 2026-11-04 from `main` at commit `2ac079c` (build `photo-challenge-buildpacks-pipelinerun-7lzt8`). The verified Toolforge runtime is Node.js `26.12.1` with npm `12.2.1`; after the restart the service reported running and `/healthz` returned HTTP 200. The interactive OAuth and sandbox-publish checks for this deployment are still pending. See the architecture document for the complete build, restart, verification, rollback, and SSH operating procedure.
+The current production baseline was built on 2026-11-04 from `main` at commit `2ac079c` (build `photo-challenge-buildpacks-pipelinerun-7lzt8`). The verified Toolforge runtime is Node.js `26.12.1` with npm `12.2.1`; after the restart the service reported running and `/healthz` returned HTTP 200. The interactive OAuth sign-in and sandbox-publish checks for this deployment were completed on 2026-11-04. See the architecture document for the complete build, restart, verification, rollback, and SSH operating procedure.
 
 ## Usage Overview
 
