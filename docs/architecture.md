@@ -232,7 +232,7 @@ Toolforge deployment is part of the system architecture because authentication s
 
 ### Production baseline
 
-The production service is `https://photo-challenge.toolforge.org/`, running as a single-replica `buildservice` in OAuth mode. As of 2026-08-12, the deployed and `main` baseline is commit `ff608e0`, built with Node.js `26.1.0`, npm `12.0.2`, and the latest Toolforge buildpack versions. The root `Procfile` supplies the `web: npm start` process. The service reports as running; `/healthz` remains the required post-restart smoke check, and sign-in uses the Meta-Wiki OAuth flow.
+The production service is `https://photo-challenge.toolforge.org/`, running as a single-replica `buildservice` in OAuth mode. As of 2026-11-04, the deployed and `main` baseline is commit `2754277` (build `photo-challenge-buildpacks-pipelinerun-j9tp9`), built with Node.js `26.12.1`, npm `12.2.1`, and the latest Toolforge buildpack versions. The root `Procfile` supplies the `web: npm start` process. The service reports as running; `/healthz` remains the required post-restart smoke check, and sign-in uses the Meta-Wiki OAuth flow.
 
 ### Deployment configuration and secrets
 

@@ -229,7 +229,7 @@ Toolforge deployment 屬於系統架構的一部分，因為 authentication sess
 
 ### Production baseline
 
-正式服務為 `https://photo-challenge.toolforge.org/`，以單一 replica 的 `buildservice` 運行並固定使用 OAuth 模式。截至 2026-08-12，已部署且與 `main` 同步的 baseline 是 commit `ff608e0`，使用 Node.js `26.1.0`、npm `12.0.2` 與 Toolforge latest buildpack versions 建置。根目錄 `Procfile` 提供 `web: npm start` process；service status 顯示 running，restart 後仍必須以 `/healthz` smoke check 驗證，登入使用 Meta-Wiki OAuth flow。
+正式服務為 `https://photo-challenge.toolforge.org/`，以單一 replica 的 `buildservice` 運行並固定使用 OAuth 模式。截至 2026-11-04，已部署且與 `main` 同步的 baseline 是 commit `2754277`（build `photo-challenge-buildpacks-pipelinerun-j9tp9`），使用 Node.js `26.12.1`、npm `12.2.1` 與 Toolforge latest buildpack versions 建置。根目錄 `Procfile` 提供 `web: npm start` process；service status 顯示 running，restart 後仍必須以 `/healthz` smoke check 驗證，登入使用 Meta-Wiki OAuth flow。
 
 ### 部署設定與 secret
 
