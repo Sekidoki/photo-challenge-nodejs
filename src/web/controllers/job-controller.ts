@@ -9,7 +9,7 @@ import {
 } from "../../core/job-actions.js";
 import { getCredentialPassword, rememberCredential } from "../../infra/credential-store.js";
 import { config } from "../../infra/config.js";
-import { loadPersistedJob } from "../../infra/job-history.js";
+import { loadJobRunStats, loadPersistedJob } from "../../infra/job-history.js";
 import { jobStore } from "../../infra/job-store.js";
 import { getJobOutputPaths } from "../../infra/output-paths.js";
 import { createCommonsBot, isCommonsLoginError, toUserFacingCommonsErrorMessage } from "../../services/commons-bot.js";
@@ -25,7 +25,7 @@ import {
   loadGeneratedFiles,
   resolveArtifactPath
 } from "../artifacts.js";
-import { buildMaintenancePublishReview } from "../maintenance-publish-review.js";
+import { buildMaintenancePublishReview, groupMaintenanceReviewEntries } from "../maintenance-publish-review.js";
 import { buildPublishableArtifacts } from "../publish-review.js";
 import { buildStandardPublishReview, toStandardPublishPlan } from "../standard-publish-review.js";
 import { buildHomePageViewModel } from "./home-controller.js";
@@ -264,7 +264,6 @@ export async function renderJobProgress(request: Request, response: Response) {
     return;
   }
 
-  const coreArtifacts = job.status === "completed" ? await loadCoreArtifacts(job.id, job.action, undefined, t) : [];
   const stage = workflowStageForJob(job);
 
   response.render("progress", {
@@ -277,8 +276,7 @@ export async function renderJobProgress(request: Request, response: Response) {
     isCompleted: job.status === "completed",
     isTerminal: job.status === "failed" || job.status === "completed",
     failureHint: failureHint(job.errorMessage, t),
-    retryUrl: buildRetryUrl(job),
-    coreArtifacts
+    retryUrl: buildRetryUrl(job)
   });
 }
 
@@ -314,6 +312,9 @@ export async function renderJobResult(request: Request, response: Response) {
   const leaderboard = isVoteCountingAction(job.action)
     ? await loadResultLeaderboard(job.id, artifacts.generated)
     : [];
+  const runStats = isVoteCountingAction(job.action) && job.status === "completed"
+    ? await loadJobRunStats(job.id)
+    : null;
 
   response.render("result", {
     title: `${t("result.title")} · ${job.challenge}`,
@@ -323,6 +324,7 @@ export async function renderJobResult(request: Request, response: Response) {
     jobActionLabel: formatActionLabel(job.action, t),
     coreArtifacts,
     leaderboard,
+    runStats,
     generatedFiles: otherGeneratedFiles,
     logFiles: artifacts.logs,
     publishReviewUrl: `/jobs/${job.id}/publish-review?mode=${reviewMode}`,
@@ -423,6 +425,7 @@ export async function renderMaintenanceReview(request: Request, response: Respon
       jobActionLabel: formatActionLabel(job.action, t),
       overview: review.overview,
       reviewEntries: review.entries,
+      reviewGroups: groupMaintenanceReviewEntries(review.entries, t),
       publishHistory: review.publishHistory,
       reviewMode: mode,
       alternateMode: mode === "sandbox" ? "live" : "sandbox",

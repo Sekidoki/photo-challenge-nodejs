@@ -1,176 +1,204 @@
-<section class="panel">
-  <h1>{{t "app.runner"}}</h1>
-  {{> workflow-steps steps=workflowSteps}}
+<div class="bento">
+  <header class="page-header">
+    <h1>{{t "app.runner"}}</h1>
+    {{> workflow-steps steps=workflowSteps}}
+  </header>
 
-  {{#if success}}<div class="notice" role="status">{{success}}</div>{{/if}}
+  {{#if success}}<div class="message message-success" role="status">{{success}}</div>{{/if}}
   {{#if errorSummary.length}}
-    <div class="alert error-summary" role="alert" tabindex="-1" data-error-summary>
+    <div class="message message-error error-summary" role="alert" tabindex="-1" data-error-summary>
       <strong>{{t "home.error.summary"}}</strong>
       <ul>{{#each errorSummary}}<li><a href="#{{field}}">{{message}}</a></li>{{/each}}</ul>
     </div>
-  {{else if error}}<div class="alert" role="alert">{{error}}</div>{{/if}}
-  {{#if oauthConfigurationMessage}}{{#unless oauthConfigured}}<div class="notice notice-neutral" role="status">{{oauthConfigurationMessage}}</div>{{/unless}}{{/if}}
+  {{else if error}}<div class="message message-error" role="alert">{{error}}</div>{{/if}}
+  {{#if oauthConfigurationMessage}}{{#unless oauthConfigured}}<div class="message" role="status">{{oauthConfigurationMessage}}</div>{{/unless}}{{/if}}
 
-  {{#if savedCredential}}{{#unless oauthConfigured}}
-    <form method="post" action="/credentials/clear" id="clear-credential-form" data-confirm="{{t "home.local.confirmClear" name=savedCredential.name}}">
-      <input type="hidden" name="name" value="{{savedCredential.name}}" />
-    </form>
-  {{/unless}}{{/if}}
+  <div class="tile home-start{{#if recentJobs.length}} span-8{{else if oauthUser}} span-8{{/if}}">
+    {{#if savedCredential}}{{#unless oauthConfigured}}
+      <form method="post" action="/credentials/clear" id="clear-credential-form" data-confirm="{{t "home.local.confirmClear" name=savedCredential.name}}">
+        <input type="hidden" name="name" value="{{savedCredential.name}}" />
+      </form>
+    {{/unless}}{{/if}}
 
-  <form method="post" action="/jobs" class="form-grid" data-dashboard-form data-live-confirm="{{t "home.live.confirm" account=liveAccountName challenge="{challenge}"}}">
-    {{#if oauthConfigured}}<input type="hidden" name="csrfToken" value="{{csrfToken}}" />{{/if}}
+    <form method="post" action="/jobs" class="form-grid" data-dashboard-form data-live-confirm="{{t "home.live.confirm" account=liveAccountName challenge="{challenge}"}}">
+      {{#if oauthConfigured}}<input type="hidden" name="csrfToken" value="{{csrfToken}}" />{{/if}}
 
-    <section class="form-section" aria-labelledby="account-heading">
       {{#if oauthConfigured}}
-        <h2 id="account-heading">{{t "home.oauth.heading"}}</h2>
-        {{#if oauthUser}}
-          <p class="form-section-status">{{t "account.signedInAs" name=oauthUser.name}} · {{t "home.oauth.sessionOnly"}}</p>
-        {{else}}
-          <p class="form-section-status">{{t "home.oauth.signedOutCopy"}}</p>
-          <p><a class="button-link" href="/auth/login">{{t "account.signIn"}}</a></p>
-        {{/if}}
+        {{#unless oauthUser}}
+          <section class="form-section" aria-labelledby="account-heading">
+            <h2 id="account-heading">{{t "home.oauth.heading"}}</h2>
+            <p class="form-section-status">{{t "home.oauth.signedOutCopy"}}</p>
+            <p><a class="button-link button-primary" href="/auth/login">{{t "account.signIn"}}</a></p>
+          </section>
+        {{/unless}}
       {{else}}
-        <h2 id="account-heading">{{t "home.local.heading"}}</h2>
-        <p class="form-section-status">
-          {{#if savedCredential}}{{t "home.local.savedStatus" name=savedCredential.name backend=credentialStore.backendLabel}}{{#unless credentialStore.canPersistAcrossRestarts}} · {{t "home.local.sessionOnly"}}{{/unless}}{{else}}{{t "home.local.noSaved"}}{{/if}}
-          {{#if savedCredential}}<button type="submit" form="clear-credential-form" data-processing-text="{{t "common.processing"}}" class="button-quiet button-small">{{t "home.local.clear"}}</button>{{/if}}
-        </p>
-        <div class="field-row">
-          <label for="name">
-            <span>{{t "home.local.name"}}</span>
-            <input id="name" name="name" type="text" value="{{defaults.name}}" required autocomplete="username" {{#if fieldErrors.name}}aria-invalid="true" aria-describedby="name-error name-help"{{else}}aria-describedby="name-help"{{/if}} />
-            {{#if fieldErrors.name}}<small id="name-error" class="field-error">{{fieldErrors.name}}</small>{{/if}}<small id="name-help">{{t "home.local.nameHelp"}}</small>
-          </label>
-          <label for="botPassword">
-            <span>{{t "home.local.password"}}</span>
-            <input id="botPassword" name="botPassword" type="password" autocomplete="current-password" {{#unless savedCredential}}required{{/unless}} {{#if fieldErrors.botPassword}}aria-invalid="true" aria-describedby="botPassword-error botPassword-help"{{else}}aria-describedby="botPassword-help"{{/if}} />
-            {{#if fieldErrors.botPassword}}<small id="botPassword-error" class="field-error">{{fieldErrors.botPassword}}</small>{{/if}}<small id="botPassword-help">{{#if savedCredential}}{{t "home.local.passwordSavedHelp" name=savedCredential.name}}{{else}}{{t "home.local.passwordHelp"}}{{/if}}</small>
-          </label>
-        </div>
-        <label class="checkbox-row">
-          <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
-          <span>{{t "home.local.remember"}}</span>
-        </label>
-      {{/if}}
-    </section>
-
-    <section class="form-section" aria-labelledby="job-heading">
-      <h2 id="job-heading">{{t "home.workflow.heading"}}</h2>
-      <label for="challenge">
-        <span>{{t "common.challenge"}}</span>
-        <input id="challenge" name="challenge" type="text" value="{{defaults.challenge}}" placeholder="{{t "home.challenge.placeholder"}}" required autocomplete="off" {{#if recentChallenges.length}}list="recent-challenges"{{/if}} {{#if fieldErrors.challenge}}aria-invalid="true" aria-describedby="challenge-error"{{/if}} />
-        {{#if fieldErrors.challenge}}<small id="challenge-error" class="field-error">{{fieldErrors.challenge}}</small>{{/if}}
-        {{#if recentChallenges.length}}<datalist id="recent-challenges">{{#each recentChallenges}}<option value="{{this}}"></option>{{/each}}</datalist>{{/if}}
-      </label>
-
-      <fieldset class="choice-group">
-        <legend>{{t "common.action"}}</legend>
-        <label class="choice">
-          <input name="action" type="radio" value="create-voting" {{#if (eq defaults.action "create-voting")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.workflow.voting.title"}}</span><span class="choice-text">{{t "home.workflow.voting.text"}}</span><span class="choice-meta">{{t "home.workflow.voting.meta"}}</span></span>
-        </label>
-        <label class="choice">
-          <input name="action" type="radio" value="count-votes-and-select-winners" {{#if (eq defaults.action "count-votes-and-select-winners")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.workflow.count.title"}}</span><span class="choice-text">{{t "home.workflow.count.text"}}</span><span class="choice-meta">{{t "home.workflow.count.meta"}}</span></span>
-        </label>
-        <label class="choice">
-          <input name="action" type="radio" value="post-results-maintenance" {{#if (eq defaults.action "post-results-maintenance")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.workflow.maintenance.title"}}</span><span class="choice-text">{{t "home.workflow.maintenance.text"}}</span><span class="choice-meta">{{t "home.workflow.maintenance.meta"}}</span></span>
-        </label>
-      </fieldset>
-
-      <div class="workflow-settings">
-        <div data-workflow-settings="create-voting" class="settings-grid">
-          <p class="settings-copy">{{t "home.voting.copy"}}</p>
-          <label>
-            <span>{{t "home.voting.entryMode"}}</span>
-            <select name="entryMode" aria-describedby="entryMode-help">
-              <option value="single" {{#if (eq defaults.entryMode "single")}}selected{{/if}}>{{t "home.voting.single"}}</option>
-              <option value="duo-coequal" {{#if (eq defaults.entryMode "duo-coequal")}}selected{{/if}}>{{t "home.voting.duoCoequal"}}</option>
-              <option value="duo-reference" {{#if (eq defaults.entryMode "duo-reference")}}selected{{/if}}>{{t "home.voting.duoReference"}}</option>
-            </select>
-            <small id="entryMode-help">{{t "home.voting.entryModeHelp"}}</small>
-          </label>
-          <label for="submissionStart">
-            <span>{{t "home.voting.start"}}</span>
-            <input id="submissionStart" name="submissionStart" type="datetime-local" value="{{defaults.submissionStart}}" aria-describedby="submissionStart-help{{#if fieldErrors.submissionStart}} submissionStart-error{{/if}}" {{#if fieldErrors.submissionStart}}aria-invalid="true"{{/if}} />
-            {{#if fieldErrors.submissionStart}}<small id="submissionStart-error" class="field-error">{{fieldErrors.submissionStart}}</small>{{/if}}<small id="submissionStart-help">{{t "home.voting.startHelp"}}</small>
-          </label>
-          <label for="submissionEnd">
-            <span>{{t "home.voting.end"}}</span>
-            <input id="submissionEnd" name="submissionEnd" type="datetime-local" value="{{defaults.submissionEnd}}" aria-describedby="submissionEnd-help{{#if fieldErrors.submissionEnd}} submissionEnd-error{{/if}}" {{#if fieldErrors.submissionEnd}}aria-invalid="true"{{/if}} />
-            {{#if fieldErrors.submissionEnd}}<small id="submissionEnd-error" class="field-error">{{fieldErrors.submissionEnd}}</small>{{/if}}<small id="submissionEnd-help">{{t "home.voting.endHelp"}}</small>
-          </label>
-          <p class="settings-timezone">{{t "home.voting.timezone"}}</p>
-        </div>
-        <div data-workflow-settings="count-votes-and-select-winners">
-          <p class="settings-copy">{{t "home.noExtraSettings"}}</p>
-        </div>
-        <div data-workflow-settings="post-results-maintenance" class="settings-grid">
-          <label>
-            <span>{{t "home.maintenance.paired"}}</span>
-            <input name="pairedChallenge" type="text" value="{{defaults.pairedChallenge}}" placeholder="{{t "home.maintenance.pairedPlaceholder"}}" aria-describedby="pairedChallenge-help" />
-            <small id="pairedChallenge-help">{{t "home.maintenance.pairedHelp"}}</small>
-          </label>
-          <p class="settings-copy">{{t "home.maintenance.note"}}</p>
-        </div>
-      </div>
-      <p class="visually-hidden" aria-live="polite" data-settings-announcer></p>
-    </section>
-
-    <section class="form-section" aria-labelledby="publish-heading">
-      <h2 id="publish-heading">{{t "home.publishMode.heading"}}</h2>
-      <fieldset class="choice-group choice-group-inline">
-        <legend class="visually-hidden">{{t "home.publishMode.heading"}}</legend>
-        <label class="choice">
-          <input name="publishMode" type="radio" value="dry-run" {{#if (eq defaults.publishMode "dry-run")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.publishMode.dryRun.title"}}</span><span class="choice-text">{{t "home.publishMode.dryRun.text"}}</span></span>
-        </label>
-        <label class="choice">
-          <input name="publishMode" type="radio" value="sandbox" {{#if (eq defaults.publishMode "sandbox")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.publishMode.sandbox.title"}}</span><span class="choice-text">{{t "home.publishMode.sandbox.text"}}</span><span class="choice-meta">{{t "home.publishMode.sandbox.meta"}}</span></span>
-        </label>
-        <label class="choice choice-live">
-          <input name="publishMode" type="radio" value="live" {{#if (eq defaults.publishMode "live")}}checked{{/if}} />
-          <span class="choice-body"><span class="choice-title">{{t "home.publishMode.live.title"}}</span><span class="choice-text">{{t "home.publishMode.live.text"}}</span><strong class="choice-meta choice-warning">{{t "home.publishMode.live.meta"}}</strong></span>
-        </label>
-      </fieldset>
-      <div class="live-ack" data-live-ack>
-        <label class="checkbox-row">
-          <input id="confirmLive" name="confirmLive" type="checkbox" value="true" {{#if fieldErrors.confirmLive}}aria-invalid="true" aria-describedby="confirmLive-error"{{/if}} />
-          <span>{{t "home.live.ack"}}</span>
-        </label>
-        {{#if fieldErrors.confirmLive}}<small id="confirmLive-error" class="field-error">{{fieldErrors.confirmLive}}</small>{{/if}}
-      </div>
-    </section>
-
-    <div class="form-actions">
-      <button type="submit" data-start-button data-processing-text="{{t "home.starting"}}" data-default-text="{{t "home.start"}}" data-live-text="{{t "home.live.start"}}" class="{{#if (eq defaults.publishMode "live")}}button-destructive{{/if}}" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>{{#if (eq defaults.publishMode "live")}}{{t "home.live.start"}}{{else}}{{t "home.start"}}{{/if}}</button>
-      {{#if oauthConfigured}}{{#unless oauthUser}}<a href="/auth/login">{{t "home.signInToContinue"}}</a>{{/unless}}{{/if}}
-    </div>
-  </form>
-</section>
-
-{{#if recentJobs.length}}
-  <section class="panel panel-secondary" aria-labelledby="recent-heading">
-    <h2 id="recent-heading">{{t "home.recent.heading"}}</h2>
-    <ul class="job-history-list">
-      {{#each recentJobs}}
-        <li class="job-history-item">
-          <div class="job-history-copy">
-            <div class="job-history-heading">
-              <strong>{{challenge}}</strong>
-              <span class="status-pill {{statusClass}}">{{statusLabel}}</span>
+      <section class="form-section" aria-labelledby="account-heading">
+          <h2 id="account-heading">{{t "home.local.heading"}}</h2>
+          <p class="form-section-status">
+            {{#if savedCredential}}{{t "home.local.savedStatus" name=savedCredential.name backend=credentialStore.backendLabel}}{{#unless credentialStore.canPersistAcrossRestarts}} · {{t "home.local.sessionOnly"}}{{/unless}}{{else}}{{t "home.local.noSaved"}}{{/if}}
+            {{#if savedCredential}}<button type="submit" form="clear-credential-form" data-processing-text="{{t "common.processing"}}" class="button-quiet button-small">{{t "home.local.clear"}}</button>{{/if}}
+          </p>
+          {{#if savedCredential}}<details class="credential-edit"{{#if fieldErrors.name}} open{{/if}}{{#if fieldErrors.botPassword}} open{{/if}}><summary>{{t "home.local.change"}}</summary>{{/if}}
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="name">{{t "home.local.name"}}</label>
+              <small class="field-description" id="name-help">{{t "home.local.nameHelp"}}</small>
+              <input id="name" name="name" type="text" value="{{defaults.name}}" required autocomplete="username" {{#if fieldErrors.name}}aria-invalid="true" aria-describedby="name-error name-help"{{else}}aria-describedby="name-help"{{/if}} />
+              {{#if fieldErrors.name}}<small id="name-error" class="field-error">{{fieldErrors.name}}</small>{{/if}}
             </div>
-            <p class="job-history-meta">{{action}} · {{timestampLabel}}</p>
+            <div class="field">
+              <label class="field-label" for="botPassword">{{t "home.local.password"}}</label>
+              <small class="field-description" id="botPassword-help">{{#if savedCredential}}{{t "home.local.passwordSavedHelp" name=savedCredential.name}}{{else}}{{t "home.local.passwordHelp"}}{{/if}} <a href="https://commons.wikimedia.org/wiki/Special:BotPasswords" target="_blank" rel="noopener noreferrer">{{t "home.local.botPasswordLink"}}<span class="visually-hidden"> ({{t "accessibility.opensNewTab"}})</span></a></small>
+              <input id="botPassword" name="botPassword" type="password" autocomplete="current-password" {{#unless savedCredential}}required{{/unless}} {{#if fieldErrors.botPassword}}aria-invalid="true" aria-describedby="botPassword-error botPassword-help"{{else}}aria-describedby="botPassword-help"{{/if}} />
+              {{#if fieldErrors.botPassword}}<small id="botPassword-error" class="field-error">{{fieldErrors.botPassword}}</small>{{/if}}
+            </div>
           </div>
-          <div class="link-actions">
-            {{#if (eq statusCode "completed")}}<a href="{{resultUrl}}">{{t "home.result"}}</a>{{/if}}
-            <a href="{{progressUrl}}">{{t "home.progress"}}</a>
-            <a href="{{reuseUrl}}">{{t "home.recent.reuse"}}</a>
+          <label class="checkbox-row">
+            <input name="rememberCredential" type="checkbox" value="true" {{#if credentialStore.canPersistAcrossRestarts}}checked{{/if}} />
+            <span>{{t "home.local.remember"}}</span>
+          </label>
+          {{#if savedCredential}}</details>{{/if}}
+      </section>
+      {{/if}}
+
+      <section class="form-section" aria-labelledby="job-heading">
+        <h2 id="job-heading">{{t "home.workflow.heading"}}</h2>
+        <div class="field">
+          <label class="field-label" for="challenge">{{t "common.challenge"}}</label>
+          <input id="challenge" name="challenge" type="text" value="{{defaults.challenge}}" placeholder="{{t "home.challenge.placeholder"}}" required autocomplete="off" {{#if recentChallenges.length}}list="recent-challenges"{{/if}} {{#if fieldErrors.challenge}}aria-invalid="true" aria-describedby="challenge-error"{{/if}} />
+          {{#if fieldErrors.challenge}}<small id="challenge-error" class="field-error">{{fieldErrors.challenge}}</small>{{/if}}
+          {{#if recentChallenges.length}}<datalist id="recent-challenges">{{#each recentChallenges}}<option value="{{this}}"></option>{{/each}}</datalist>{{/if}}
+        </div>
+
+        <fieldset class="choice-group choice-group-inline">
+          <legend>{{t "common.action"}}</legend>
+          <label class="choice">
+            <input name="action" type="radio" value="create-voting" {{#if (eq defaults.action "create-voting")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.workflow.voting.title"}}</span><span class="choice-text">{{t "home.workflow.voting.text"}}</span><span class="choice-meta">{{t "home.workflow.voting.meta"}}</span></span>
+          </label>
+          <label class="choice">
+            <input name="action" type="radio" value="count-votes-and-select-winners" {{#if (eq defaults.action "count-votes-and-select-winners")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.workflow.count.title"}}</span><span class="choice-text">{{t "home.workflow.count.text"}}</span><span class="choice-meta">{{t "home.workflow.count.meta"}}</span></span>
+          </label>
+          <label class="choice">
+            <input name="action" type="radio" value="post-results-maintenance" {{#if (eq defaults.action "post-results-maintenance")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.workflow.maintenance.title"}}</span><span class="choice-text">{{t "home.workflow.maintenance.text"}}</span><span class="choice-meta">{{t "home.workflow.maintenance.meta"}}</span></span>
+          </label>
+        </fieldset>
+
+        <div class="workflow-settings">
+          <div data-workflow-settings="create-voting" class="settings-grid">
+            <p class="settings-copy">{{t "home.voting.copy"}}</p>
+            <div class="field">
+              <label class="field-label" for="entryMode">{{t "home.voting.entryMode"}}</label>
+              <small class="field-description" id="entryMode-help">{{t "home.voting.entryModeHelp"}}</small>
+              <select id="entryMode" name="entryMode" aria-describedby="entryMode-help">
+                <option value="single" {{#if (eq defaults.entryMode "single")}}selected{{/if}}>{{t "home.voting.single"}}</option>
+                <option value="duo-coequal" {{#if (eq defaults.entryMode "duo-coequal")}}selected{{/if}}>{{t "home.voting.duoCoequal"}}</option>
+                <option value="duo-reference" {{#if (eq defaults.entryMode "duo-reference")}}selected{{/if}}>{{t "home.voting.duoReference"}}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="submissionStart">{{t "home.voting.start"}}</label>
+              <small class="field-description" id="submissionStart-help">{{t "home.voting.startHelp"}}</small>
+              <input id="submissionStart" name="submissionStart" type="datetime-local" value="{{defaults.submissionStart}}" aria-describedby="submissionStart-help{{#if fieldErrors.submissionStart}} submissionStart-error{{/if}}" {{#if fieldErrors.submissionStart}}aria-invalid="true"{{/if}} />
+              {{#if fieldErrors.submissionStart}}<small id="submissionStart-error" class="field-error">{{fieldErrors.submissionStart}}</small>{{/if}}
+            </div>
+            <div class="field">
+              <label class="field-label" for="submissionEnd">{{t "home.voting.end"}}</label>
+              <small class="field-description" id="submissionEnd-help">{{t "home.voting.endHelp"}}</small>
+              <input id="submissionEnd" name="submissionEnd" type="datetime-local" value="{{defaults.submissionEnd}}" aria-describedby="submissionEnd-help{{#if fieldErrors.submissionEnd}} submissionEnd-error{{/if}}" {{#if fieldErrors.submissionEnd}}aria-invalid="true"{{/if}} />
+              {{#if fieldErrors.submissionEnd}}<small id="submissionEnd-error" class="field-error">{{fieldErrors.submissionEnd}}</small>{{/if}}
+            </div>
+            <p class="settings-timezone">{{t "home.voting.timezone"}}</p>
           </div>
-        </li>
-      {{/each}}
-    </ul>
-  </section>
-{{/if}}
+          <div data-workflow-settings="count-votes-and-select-winners">
+            <p class="settings-copy">{{t "home.noExtraSettings"}}</p>
+          </div>
+          <div data-workflow-settings="post-results-maintenance" class="settings-grid">
+            <div class="field">
+              <label class="field-label" for="pairedChallenge">{{t "home.maintenance.paired"}}</label>
+              <small class="field-description" id="pairedChallenge-help">{{t "home.maintenance.pairedHelp"}}</small>
+              <input id="pairedChallenge" name="pairedChallenge" type="text" value="{{defaults.pairedChallenge}}" placeholder="{{t "home.maintenance.pairedPlaceholder"}}" aria-describedby="pairedChallenge-help" />
+            </div>
+            <p class="settings-copy">{{t "home.maintenance.note"}}</p>
+          </div>
+        </div>
+        <p class="visually-hidden" aria-live="polite" data-settings-announcer></p>
+      </section>
+
+      <section class="form-section" aria-labelledby="publish-heading">
+        <h2 id="publish-heading">{{t "home.publishMode.heading"}}</h2>
+        <fieldset class="choice-group choice-group-inline">
+          <legend class="visually-hidden">{{t "home.publishMode.heading"}}</legend>
+          <label class="choice">
+            <input name="publishMode" type="radio" value="dry-run" {{#if (eq defaults.publishMode "dry-run")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.publishMode.dryRun.title"}}</span><span class="choice-text">{{t "home.publishMode.dryRun.text"}}</span></span>
+          </label>
+          <label class="choice">
+            <input name="publishMode" type="radio" value="sandbox" {{#if (eq defaults.publishMode "sandbox")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.publishMode.sandbox.title"}}</span><span class="choice-text">{{t "home.publishMode.sandbox.text"}}</span><span class="choice-meta">{{t "home.publishMode.sandbox.meta"}}</span></span>
+          </label>
+          <label class="choice choice-live">
+            <input name="publishMode" type="radio" value="live" {{#if (eq defaults.publishMode "live")}}checked{{/if}} />
+            <span class="choice-body"><span class="choice-title">{{t "home.publishMode.live.title"}}</span><span class="choice-text">{{t "home.publishMode.live.text"}}</span><strong class="choice-meta choice-warning">{{t "home.publishMode.live.meta"}}</strong></span>
+          </label>
+        </fieldset>
+        <div class="message message-warning message-inline live-ack" data-live-ack>
+          <label class="checkbox-row">
+            <input id="confirmLive" name="confirmLive" type="checkbox" value="true" {{#if fieldErrors.confirmLive}}aria-invalid="true" aria-describedby="confirmLive-error"{{/if}} />
+            <span>{{t "home.live.ack"}}</span>
+          </label>
+          {{#if fieldErrors.confirmLive}}<small id="confirmLive-error" class="field-error">{{fieldErrors.confirmLive}}</small>{{/if}}
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button type="submit" data-start-button data-processing-text="{{t "home.starting"}}" data-default-text="{{t "home.start"}}" data-live-text="{{t "home.live.start"}}" class="button-primary{{#if (eq defaults.publishMode "live")}} button-destructive{{/if}}" {{#if oauthConfigured}}{{#unless oauthUser}}disabled{{/unless}}{{/if}}>{{#if (eq defaults.publishMode "live")}}{{t "home.live.start"}}{{else}}{{t "home.start"}}{{/if}}</button>
+        {{#if oauthConfigured}}{{#unless oauthUser}}<a href="/auth/login">{{t "home.signInToContinue"}}</a>{{/unless}}{{/if}}
+      </div>
+    </form>
+  </div>
+
+  <div class="bento-stack span-4">
+  {{#if recentJobs.length}}
+    <section class="tile" aria-labelledby="recent-heading">
+      <h2 id="recent-heading">{{t "home.recent.heading"}}</h2>
+      <ul class="job-history-list">
+        {{#each recentJobs}}
+          <li class="job-history-item">
+            <div class="job-history-copy">
+              <div class="job-history-heading">
+                <strong>{{challenge}}</strong>
+                <span class="status-pill {{statusClass}}">{{statusLabel}}</span>
+              </div>
+              <p class="job-history-meta">{{action}} · {{timestampLabel}}</p>
+            </div>
+            {{!-- One next action per state; the rest stay as plain links. --}}
+            <div class="link-actions">
+              {{#if (eq statusCode "completed")}}
+                <a class="button-link button-small" href="{{resultUrl}}">{{t "home.result"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+                <a href="{{progressUrl}}">{{t "home.progress"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+                <a href="{{reuseUrl}}">{{t "home.recent.reuse"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+              {{else if (eq statusCode "failed")}}
+                <a class="button-link button-small" href="{{reuseUrl}}">{{t "progress.retryWithSettings"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+                <a href="{{progressUrl}}">{{t "home.progress"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+              {{else}}
+                <a class="button-link button-small" href="{{progressUrl}}">{{t "home.progress"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+                <a href="{{reuseUrl}}">{{t "home.recent.reuse"}}<span class="visually-hidden"> · {{challenge}}</span></a>
+              {{/if}}
+            </div>
+          </li>
+        {{/each}}
+      </ul>
+    </section>
+  {{/if}}
+
+  {{#if oauthConfigured}}{{#if oauthUser}}
+    <section class="tile" aria-labelledby="account-heading">
+      <h2 id="account-heading">{{t "home.oauth.heading"}}</h2>
+      <p class="form-section-status">{{t "account.signedInAs" name=oauthUser.name}} · {{t "home.oauth.sessionOnly"}}</p>
+    </section>
+  {{/if}}{{/if}}
+  </div>
+</div>

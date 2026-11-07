@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { test } from "../support/harness.js";
-import { loadPersistedJob } from "../../src/infra/job-history.js";
+import { loadPersistedJob, parseJobRunStats } from "../../src/infra/job-history.js";
 import { getJobOutputPaths } from "../../src/infra/output-paths.js";
 
 test("loadPersistedJob preserves publishMode for failed jobs", async () => {
@@ -33,4 +33,16 @@ test("loadPersistedJob preserves publishMode for failed jobs", async () => {
   assert.equal(job?.publishMode, "sandbox");
 
   await rm(paths.jobRoot, { recursive: true, force: true });
+});
+
+test("parseJobRunStats reads the run totals from a completed job.log", () => {
+  const stats = parseJobRunStats(
+    ["jobId=x", "status=completed", "sourceCount=2", "challengeCount=1", "fileCount=84", "voteCount=312"].join("\n")
+  );
+  assert.deepEqual(stats, { sourceCount: 2, fileCount: 84, voteCount: 312 });
+});
+
+test("parseJobRunStats returns null when a total is missing or not a count", () => {
+  assert.equal(parseJobRunStats(["status=failed", "errorMessage=boom"].join("\n")), null);
+  assert.equal(parseJobRunStats(["sourceCount=2", "fileCount=-1", "voteCount=3"].join("\n")), null);
 });

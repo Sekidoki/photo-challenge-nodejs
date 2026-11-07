@@ -1,18 +1,18 @@
-<section class="panel">
-  <div class="panel-header">
-    <div>
+<div class="bento">
+  <header class="page-header">
+    <div class="page-header-title">
       <h1>{{t "maintainers.heading"}}</h1>
-      <p class="lede">{{t "maintainers.lede"}}</p>
+      <a href="/">{{t "maintainers.back"}}</a>
     </div>
-    <a href="/">{{t "maintainers.back"}}</a>
-  </div>
+    <p class="lede">{{t "maintainers.lede"}}</p>
+  </header>
 
-  {{#if success}}<div class="notice" role="status">{{success}}</div>{{/if}}
-  {{#if fieldError}}<div class="alert error-summary" role="alert" tabindex="-1" data-error-summary><strong>{{t "maintainers.error.summary"}}</strong><ul><li><a href="#maintainerUserName">{{fieldError}}</a></li></ul></div>{{else if error}}<div class="alert" role="alert">{{error}}</div>{{/if}}
+  {{#if success}}<div class="message message-success" role="status">{{success}}</div>{{/if}}
+  {{#if fieldError}}<div class="message message-error error-summary" role="alert" tabindex="-1" data-error-summary><strong>{{t "maintainers.error.summary"}}</strong><ul><li><a href="#maintainerUserName">{{fieldError}}</a></li></ul></div>{{else if error}}<div class="message message-error" role="alert">{{error}}</div>{{/if}}
 
   {{#if maintainers.length}}
-    <section class="maintainer-overview">
-      <h2>{{t "maintainers.current"}}</h2>
+    <section class="tile span-8 maintainer-overview" aria-labelledby="maintainers-current-heading">
+      <h2 id="maintainers-current-heading">{{t "maintainers.current"}}</h2>
       <p class="lede">{{t "maintainers.currentCopy"}}</p>
       <div class="maintainer-list">
         {{#each maintainers}}
@@ -20,7 +20,7 @@
             <div class="maintainer-card-copy">
               <div class="job-history-heading">
                 <strong>{{userName}}</strong>
-                <span class="status-pill {{#if isOwner}}status-owner{{else if isManager}}status-manager{{else}}status-maintainer{{/if}}">{{roleLabel}}</span>
+                <span class="status-pill">{{roleLabel}}</span>
               </div>
               {{#if isOwner}}
                 <p class="job-history-meta">{{t "maintainers.ownerProtected"}}</p>
@@ -40,14 +40,14 @@
                       <option value="manager" {{#if isManager}}selected{{/if}}>{{t "maintainers.role.manager"}}</option>
                     </select>
                   </label>
-                  <button type="submit" class="button-quiet">{{t "maintainers.saveRole"}}</button>
+                  <button type="submit" class="button-quiet">{{t "maintainers.saveRole"}}<span class="visually-hidden"> {{userName}}</span></button>
                 </form>
               {{/if}}
               {{#if canRemove}}
                 <form method="post" action="/maintainers/remove" class="inline-control-form" data-confirm="{{t "maintainers.confirmRemove" name=userName}}">
                   <input type="hidden" name="csrfToken" value="{{../csrfToken}}" />
                   <input type="hidden" name="userName" value="{{userName}}" />
-                  <button type="submit" data-processing-text="{{t "common.processing"}}" class="button-destructive">{{t "maintainers.remove"}}</button>
+                  <button type="submit" data-processing-text="{{t "common.processing"}}" class="button-quiet button-destructive">{{t "maintainers.remove"}}<span class="visually-hidden"> {{userName}}</span></button>
                 </form>
               {{/if}}
             </div>
@@ -56,29 +56,30 @@
       </div>
     </section>
 
-    <section class="maintainer-overview">
-      <h2>{{t "maintainers.add"}}</h2>
+    <section class="tile span-4 tile-fit maintainer-overview" aria-labelledby="maintainers-add-heading">
+      <h2 id="maintainers-add-heading">{{t "maintainers.add"}}</h2>
       <p class="lede">{{#if actor.isOwner}}{{t "maintainers.addOwnerCopy"}}{{else}}{{t "maintainers.addManagerCopy"}}{{/if}}</p>
       <form method="post" action="/maintainers" class="maintainer-add-form">
         <input type="hidden" name="csrfToken" value="{{csrfToken}}" />
-        <label for="maintainerUserName">
-          <span>{{t "maintainers.userName"}}</span>
+        <div class="field">
+          <label class="field-label" for="maintainerUserName">{{t "maintainers.userName"}}</label>
+          <small class="field-description" id="maintainerUserName-help">{{t "maintainers.userNameHelp"}}</small>
           <input id="maintainerUserName" name="userName" type="text" value="{{formUserName}}" required autocomplete="username" {{#if fieldError}}aria-invalid="true" aria-describedby="maintainerUserName-error maintainerUserName-help"{{else}}aria-describedby="maintainerUserName-help"{{/if}} />
-          {{#if fieldError}}<small id="maintainerUserName-error" class="field-error">{{fieldError}}</small>{{/if}}<small id="maintainerUserName-help">{{t "maintainers.userNameHelp"}}</small>
-        </label>
+          {{#if fieldError}}<small id="maintainerUserName-error" class="field-error">{{fieldError}}</small>{{/if}}
+        </div>
         {{#if actor.isOwner}}
-          <label>
-            <span>{{t "maintainers.roleLabelPlain"}}</span>
-            <select name="role">
+          <div class="field">
+            <label class="field-label" for="maintainerRole">{{t "maintainers.roleLabelPlain"}}</label>
+            <select id="maintainerRole" name="role">
               <option value="maintainer">{{t "maintainers.role.maintainer"}}</option>
               <option value="manager">{{t "maintainers.role.manager"}}</option>
             </select>
-          </label>
+          </div>
         {{else}}
           <input type="hidden" name="role" value="maintainer" />
         {{/if}}
-        <div class="form-actions"><button type="submit">{{t "maintainers.addAction"}}</button></div>
+        <div class="form-actions"><button type="submit" class="button-primary">{{t "maintainers.addAction"}}</button></div>
       </form>
     </section>
   {{/if}}
-</section>
+</div>

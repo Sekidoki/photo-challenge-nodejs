@@ -45,7 +45,8 @@
     if (!completed) {
       setText("[data-progress-error-text]", job.errorMessage || "");
       if (job.failureHint) setText("[data-progress-hint]", job.failureHint);
-      progress?.classList.add("progress-bar-failed");
+      setHidden("[data-progress-status]", true);
+      const log = root.querySelector("[data-run-log]"); if (log instanceof HTMLDetailsElement) log.open = true;
     }
     markSteps(!completed);
     setText("[data-progress-summary]", completed ? root.dataset.completedText : root.dataset.failedText);

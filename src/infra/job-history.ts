@@ -22,6 +22,35 @@ function parseLogFile(content: string): Record<string, string> {
   return Object.fromEntries(entries);
 }
 
+export type JobRunStats = {
+  sourceCount: number;
+  fileCount: number;
+  voteCount: number;
+};
+
+function readCount(value: string | undefined): number | null {
+  if (value === undefined || !/^\d+$/.test(value.trim())) return null;
+  return Number(value.trim());
+}
+
+/** Reads the run totals a completed job wrote to its job.log, or null when they are missing. */
+export function parseJobRunStats(content: string): JobRunStats | null {
+  const values = parseLogFile(content);
+  const sourceCount = readCount(values.sourceCount);
+  const fileCount = readCount(values.fileCount);
+  const voteCount = readCount(values.voteCount);
+  if (sourceCount === null || fileCount === null || voteCount === null) return null;
+  return { sourceCount, fileCount, voteCount };
+}
+
+export async function loadJobRunStats(jobId: string): Promise<JobRunStats | null> {
+  try {
+    return parseJobRunStats(await readFile(path.join(getJobOutputPaths(jobId).logsDir, "job.log"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 function toPersistedJob(jobId: string, logValues: Record<string, string>): JobProgress {
   const paths = getJobOutputPaths(jobId);
   const finishedAtValue = logValues.completedAt ? new Date(logValues.completedAt) : null;

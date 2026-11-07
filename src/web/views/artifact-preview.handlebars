@@ -1,20 +1,24 @@
-<section class="panel panel-wide">
-  <div class="panel-header">
-    <h1>{{t "artifact.title"}}</h1>
-    <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
+<div class="bento">
+  <header class="page-header">
+    <div class="page-header-title">
+      <h1>{{t "artifact.title"}}</h1>
+      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
+    </div>
+    <p class="lede"><code>{{fileName}}</code> · {{job.challenge}}</p>
+  </header>
+
+  <div class="tile">
+    {{#if coreArtifacts.length}}
+      <nav class="preview-nav" aria-label="{{t "artifact.core"}}">
+        <ul>
+          {{#each coreArtifacts}}
+            <li>{{#if isActive}}<span class="preview-nav-current" aria-current="page">{{label}}</span>{{else}}<a href="{{previewUrl}}">{{label}}</a>{{/if}}</li>
+          {{/each}}
+        </ul>
+      </nav>
+    {{/if}}
+
+    <div class="link-actions"><a class="button-link" href="{{downloadUrl}}">{{t "common.download"}}</a></div>
+    <pre class="artifact-preview" tabindex="0"><code>{{content}}</code></pre>
   </div>
-  <p class="lede"><code>{{fileName}}</code> · {{job.challenge}}</p>
-
-  {{#if coreArtifacts.length}}
-    <nav class="preview-nav" aria-label="{{t "artifact.core"}}">
-      <ul>
-        {{#each coreArtifacts}}
-          <li>{{#if isActive}}<span class="preview-nav-current" aria-current="page">{{label}}</span>{{else}}<a href="{{previewUrl}}">{{label}}</a>{{/if}}</li>
-        {{/each}}
-      </ul>
-    </nav>
-  {{/if}}
-
-  <div class="link-actions"><a class="button-link button-quiet" href="{{downloadUrl}}">{{t "common.download"}}</a></div>
-  <pre class="artifact-preview" tabindex="0"><code>{{content}}</code></pre>
-</section>
+</div>

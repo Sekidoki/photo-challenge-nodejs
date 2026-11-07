@@ -77,14 +77,13 @@
       savedScroll = Number(sessionStorage.getItem("mode-change-scroll"));
       sessionStorage.removeItem("mode-change-scroll");
     } catch { /* storage unavailable */ }
-    const notice = document.createElement("div"); notice.className = "notice notice--toast"; notice.setAttribute("role", "status");
+    const notice = document.createElement("div"); notice.className = "message message-toast"; notice.setAttribute("role", "status");
     const text = document.createElement("span"); text.textContent = modeNotice;
     const close = document.createElement("button"); close.type = "button"; close.className = "button-quiet button-small"; close.textContent = document.body.dataset.dismissLabel || "Dismiss";
     const dismiss = () => notice.remove();
     close.addEventListener("click", dismiss);
     notice.append(text, close);
     document.querySelector("h1")?.insertAdjacentElement("afterend", notice);
-    window.setTimeout(dismiss, 6000);
     if (Number.isFinite(savedScroll)) requestAnimationFrame(() => scrollTo({ top: savedScroll }));
   }
   for (const link of document.querySelectorAll("[data-mode-switch]")) link.addEventListener("click", () => {
@@ -107,4 +106,49 @@
   const setSelection = (checked) => document.querySelectorAll('input[name="selected"]:not(:disabled)').forEach((input) => { if (input instanceof HTMLInputElement) input.checked = checked; });
   document.querySelector("[data-select-all]")?.addEventListener("click", () => setSelection(true));
   document.querySelector("[data-select-none]")?.addEventListener("click", () => setSelection(false));
+  for (const button of document.querySelectorAll("[data-select-group]")) button.addEventListener("click", () => {
+    button.closest("[data-entry-group]")?.querySelectorAll('input[name="selected"]:not(:disabled)').forEach((input) => { if (input instanceof HTMLInputElement) input.checked = true; });
+  });
+
+  // Copy buttons are progressive: they stay hidden without the Clipboard API.
+  for (const button of document.querySelectorAll("[data-copy-text]")) {
+    if (!(button instanceof HTMLButtonElement) || !navigator.clipboard) continue;
+    const label = button.textContent;
+    button.hidden = false;
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copyText || "");
+        button.textContent = button.dataset.copiedLabel || label;
+        window.setTimeout(() => { button.textContent = label; }, 2000);
+      } catch { /* clipboard permission denied: leave the path selectable */ }
+    });
+  }
+
+  // A thumbnail that fails to load shows its file name instead of an empty box.
+  const markBroken = (img) => img.closest(".result-image-link")?.classList.add("is-broken");
+  for (const img of document.querySelectorAll(".result-image-link img")) {
+    if (!(img instanceof HTMLImageElement)) continue;
+    if (img.complete && img.naturalWidth === 0) markBroken(img);
+    else img.addEventListener("error", () => markBroken(img), { once: true });
+  }
+
+  // Diff cards can fold; a link to a folded target unfolds it first.
+  for (const button of document.querySelectorAll("[data-diff-toggle]")) {
+    const body = document.getElementById(button.getAttribute("aria-controls") || "");
+    if (!(button instanceof HTMLButtonElement) || !body) continue;
+    const label = button.querySelector("[data-diff-toggle-label]");
+    button.hidden = false;
+    button.addEventListener("click", () => {
+      const open = button.getAttribute("aria-expanded") !== "true";
+      body.hidden = !open;
+      button.setAttribute("aria-expanded", String(open));
+      if (label) label.textContent = (open ? button.dataset.collapseLabel : button.dataset.expandLabel) || "";
+    });
+  }
+  document.addEventListener("click", (event) => {
+    const link = event.target instanceof Element ? event.target.closest('a[href^="#target-"]') : null;
+    const card = link ? document.getElementById(link.getAttribute("href").slice(1))?.closest("[data-diff-card]") : null;
+    const toggle = card?.querySelector('[data-diff-toggle][aria-expanded="false"]');
+    if (toggle instanceof HTMLButtonElement) toggle.click();
+  });
 })();

@@ -71,7 +71,7 @@ export async function buildMaintenancePublishReview(
     };
   }
 
-  const entries = buildMaintenancePublishEntriesFromPlan(planResult.plan, loginName, mode);
+  const entries = buildMaintenancePublishEntriesFromPlan(planResult.plan, loginName, mode).map((entry) => localizeMaintenanceEntry(entry, t));
 
   if (entries.length === 0) {
     return {
@@ -122,4 +122,44 @@ export async function buildMaintenancePublishReview(
     warning: null,
     canPublish: true
   };
+}
+
+/**
+ * The workflow writes English labels (they also land in publish history); the
+ * review screen shows them in the reader's language, built from structured fields.
+ */
+export function localizeMaintenanceEntry(entry: MaintenancePublishEntry, t: Translator): MaintenancePublishEntry {
+  const label = t(`maintenanceEntry.${entry.type}.label`);
+  switch (entry.type) {
+    case "notifications": {
+      const recipient = entry.sections?.[0]?.recipient || entry.liveTargetTitle.replace(/^User talk:/i, "");
+      return { ...entry, label, description: t("maintenanceEntry.notifications.description", { recipient, count: entry.sections?.length ?? 1 }) };
+    }
+    case "file-assessment":
+      return { ...entry, label, description: t("maintenanceEntry.file-assessment.description", { file: entry.liveTargetTitle }) };
+    default:
+      return { ...entry, label, description: t(`maintenanceEntry.${entry.type}.description`) };
+  }
+}
+
+export type MaintenanceReviewGroup = {
+  type: MaintenancePublishEntry["type"];
+  label: string;
+  entries: MaintenancePublishReviewEntry[];
+  hasMultiple: boolean;
+};
+
+const MAINTENANCE_GROUP_ORDER: Array<MaintenancePublishEntry["type"]> = ["notifications", "announcement", "previous-page", "file-assessment"];
+
+/** Groups review entries by edit type in a fixed reading order, dropping empty groups. */
+export function groupMaintenanceReviewEntries(
+  entries: MaintenancePublishReviewEntry[],
+  t: Translator = createTranslator("en")
+): MaintenanceReviewGroup[] {
+  return MAINTENANCE_GROUP_ORDER
+    .map((type) => {
+      const members = entries.filter((entry) => entry.type === type);
+      return { type, label: t(`maintenanceReview.group.${type}`), entries: members, hasMultiple: members.length > 1 };
+    })
+    .filter((group) => group.entries.length > 0);
 }

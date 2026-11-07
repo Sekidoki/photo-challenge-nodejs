@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "../support/harness.js";
 import { summarizeMaintenanceArtifact } from "../../src/web/maintenance-review.js";
-import { buildMaintenancePublishReview } from "../../src/web/maintenance-publish-review.js";
+import { buildMaintenancePublishReview, groupMaintenanceReviewEntries, localizeMaintenanceEntry } from "../../src/web/maintenance-publish-review.js";
+import { createTranslator } from "../../src/web/i18n.js";
+import type { MaintenancePublishEntry } from "../../src/workflows/maintenance-publish.js";
 import type { JobProgress } from "../../src/core/models.js";
 
 const baseMaintenanceJob: JobProgress = {
@@ -137,4 +139,53 @@ test("summarizeMaintenanceArtifact reads file assessment plan counts", () => {
   assert.equal(entry.type, "file-assessments");
   assert.equal(entry.summary, "3 file assessment edit(s) prepared.");
   assert.deepEqual(entry.excerpt, ["File:One.jpg", "File:Two.jpg", "File:Three.jpg"]);
+});
+
+test("localizeMaintenanceEntry rewrites workflow labels in the reader's language", () => {
+  const t = createTranslator("zh-TW");
+  const base = { editSummary: "", excerpt: [], targetTitle: "User:Example/Sandbox" };
+  const notification: MaintenancePublishEntry = {
+    ...base,
+    id: "notifications:User talk:Aciarium",
+    type: "notifications",
+    label: "Winner Notification",
+    description: "Prepared 2 winner message(s) for Aciarium.",
+    liveTargetTitle: "User talk:Aciarium",
+    sections: [
+      { heading: "A", bodyText: "", recipient: "Aciarium", fileName: "a.jpg" },
+      { heading: "B", bodyText: "", recipient: "Aciarium", fileName: "b.jpg" }
+    ]
+  };
+  const assessment: MaintenancePublishEntry = {
+    ...base,
+    id: "file-assessment:File:a.jpg",
+    type: "file-assessment",
+    label: "File Assessment",
+    description: "Apply the assessment template to File:a.jpg.",
+    liveTargetTitle: "File:a.jpg"
+  };
+
+  const localizedNotification = localizeMaintenanceEntry(notification, t);
+  assert.equal(localizedNotification.label, "得獎通知");
+  assert.equal(localizedNotification.description, "給 Aciarium 的得獎通知：2 則");
+  assert.equal(localizedNotification.sections?.length, 2);
+  assert.equal(localizeMaintenanceEntry(assessment, t).description, "為 File:a.jpg 加上評級模板。");
+});
+
+test("groupMaintenanceReviewEntries keeps a fixed order and drops empty groups", async () => {
+  const review = await buildMaintenancePublishReview(
+    baseMaintenanceJob,
+    "sandbox",
+    [],
+    "Example User@BotApp",
+    null,
+    [{ name: "2026_-_February_-_Orange_maintenance_plan.json", content: maintenancePlanJson }]
+  );
+  const groups = groupMaintenanceReviewEntries(review.entries, createTranslator("en"));
+
+  assert.deepEqual(groups.map((group) => group.type), [...new Set(review.entries.map((entry) => entry.type))].sort(
+    (left, right) => ["notifications", "announcement", "previous-page", "file-assessment"].indexOf(left) - ["notifications", "announcement", "previous-page", "file-assessment"].indexOf(right)
+  ));
+  assert.equal(groups.reduce((total, group) => total + group.entries.length, 0), review.entries.length);
+  assert.equal(groups.every((group) => group.hasMultiple === group.entries.length > 1), true);
 });

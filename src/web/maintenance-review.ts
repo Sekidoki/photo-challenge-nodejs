@@ -11,6 +11,14 @@ export type MaintenanceReviewEntry = {
   excerpt: string[];
 };
 
+/** The plan records each source as "job <id>" or "published page <title>"; show it in the reader's language. */
+function describeMaintenanceSource(source: string | undefined, t: Translator): string {
+  if (!source) return t("maintenanceSummary.unknownJob");
+  if (source.startsWith("job ")) return t("maintenanceSummary.sourceJob", { id: source.slice(4) });
+  if (source.startsWith("published page ")) return t("maintenanceSummary.sourcePage", { title: source.slice(15) });
+  return source;
+}
+
 export function summarizeMaintenanceArtifact(
   fileName: string,
   content: string,
@@ -49,14 +57,14 @@ export function summarizeMaintenanceArtifact(
       heading: null,
       summary: t("maintenanceSummary.plan", { challenges: challengeCount, notifications, assessments }),
       excerpt: [
-        t("maintenanceSummary.mode", { mode: plan.mode ?? t("mode.dry-run") }),
+        t("maintenanceSummary.mode", { mode: plan.mode === "dry-run" || plan.mode === "sandbox" || plan.mode === "live" ? t(`mode.${plan.mode}`) : plan.mode ?? t("mode.dry-run") }),
         t("maintenanceSummary.primary", { challenge: plan.primaryChallenge ?? t("common.unknown") }),
         pairedLabel,
         t("maintenanceSummary.announcement", { state: t(plan.challengeAnnouncement ? "maintenanceSummary.planned" : "maintenanceSummary.notPlanned") }),
         t("maintenanceSummary.previous", { state: t(plan.previousPageUpdate ? "maintenanceSummary.planned" : "maintenanceSummary.notPlanned") }),
         ...sources.slice(0, 3).map((source) => t("maintenanceSummary.source", {
           challenge: source.challenge ?? t("common.unknown"),
-          job: source.jobId ?? t("maintenanceSummary.unknownJob")
+          job: describeMaintenanceSource(source.jobId, t)
         }))
       ]
     };

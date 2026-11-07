@@ -1,18 +1,20 @@
-<section class="panel panel-wide">
-  <div class="panel-header">
-    <h1>{{t "maintenanceReview.title"}}</h1>
-    <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
-  </div>
-  {{> workflow-steps steps=workflowSteps}}
-  <p class="lede">{{t "maintenanceReview.lede"}}</p>
+<div class="bento">
+  <header class="page-header">
+    <div class="page-header-title">
+      <h1>{{t "maintenanceReview.title"}}</h1>
+      <a href="/jobs/{{job.id}}/result">{{t "common.backToResult"}}</a>
+    </div>
+    {{> workflow-steps steps=workflowSteps}}
+    <p class="lede">{{t "maintenanceReview.lede"}}</p>
+  </header>
 
   {{> flash-notice notice=reviewNotice}}
-  {{#if reviewWarning}}<div class="alert" role="alert">{{reviewWarning}}</div>{{/if}}
+  {{#if reviewWarning}}<div class="message message-warning" role="alert">{{reviewWarning}}</div>{{/if}}
 
   {{> safety-summary context=publishContext challenge=job.challenge headingId="maintenance-safety-title" alternateModeLabel=alternateModeLabel alternateModeUrl=alternateModeUrl preserveSelections=true}}
 
   {{#if overview}}
-    <section class="maintenance-overview" aria-labelledby="maintenance-overview-heading">
+    <section class="tile maintenance-overview{{#if publishHistory.length}} span-8{{/if}}" aria-labelledby="maintenance-overview-heading">
       <h2 id="maintenance-overview-heading">{{overview.label}}</h2>
       <p><code>{{overview.fileName}}</code> <span class="link-actions"><a href="{{overview.previewUrl}}">{{t "common.preview"}}</a><a href="{{overview.downloadUrl}}">{{t "common.download"}}</a></span></p>
       <p class="artifact-copy">{{overview.summary}}</p>
@@ -23,7 +25,7 @@
   {{/if}}
 
   {{#if publishHistory.length}}
-    <section class="maintenance-history" aria-labelledby="maintenance-history-heading">
+    <section class="tile maintenance-history{{#if overview}} span-4 tile-fit{{/if}}" aria-labelledby="maintenance-history-heading">
       <h2 id="maintenance-history-heading">{{t "maintenanceReview.history"}}</h2>
       <ul class="artifact-list">
         {{#each publishHistory}}
@@ -40,59 +42,69 @@
     </section>
   {{/if}}
 
-  <h2>{{t "maintenanceReview.entries"}}</h2>
-  {{#if reviewEntries.length}}
-    <form method="post" action="/jobs/{{job.id}}/maintenance-publish" class="maintenance-publish-form" {{#if canPublish}}data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLiveSelected" account=publishContext.accountName wiki=publishContext.wikiLabel}}{{else}}{{t "safety.confirmSandboxSelected" account=publishContext.accountName}}{{/if}}"{{/if}}>
-      <input type="hidden" name="csrfToken" value="{{csrfToken}}">
-      <input type="hidden" name="mode" value="{{reviewMode}}">
-      {{#if canPublish}}
-        <div class="selection-tools">
-          <button type="button" class="button-quiet button-small" data-select-all>{{t "maintenanceReview.selectAll"}}</button>
-          <button type="button" class="button-quiet button-small" data-select-none>{{t "maintenanceReview.selectNone"}}</button>
-        </div>
-      {{/if}}
-      <ul class="maintenance-review-list">
-        {{#each reviewEntries}}
-          <li class="maintenance-review-card">
-            <label class="maintenance-checkbox-row">
-              <input type="checkbox" name="selected" value="{{id}}" {{#if selected}}checked{{/if}} {{#unless @root.canPublish}}disabled{{/unless}} />
-              <span class="maintenance-card-title">{{label}}</span>
-              <span class="status-pill publish-status-{{status}}">{{statusLabel}}</span>
-            </label>
-            <p class="artifact-copy">{{description}}</p>
-            <dl class="target-facts">
-              <div><dt>{{t "common.source"}}</dt><dd><code>{{liveTargetTitle}}</code></dd></div>
-              <div><dt>{{t "maintenanceReview.publishTarget"}}</dt><dd><code>{{targetTitle}}</code></dd></div>
-              <div><dt>{{t "common.review"}}</dt><dd>{{diffSummary}}</dd></div>
-            </dl>
-            {{#if excerpt.length}}
-              <ul class="maintenance-bullet-list">
-                {{#each excerpt}}<li>{{this}}</li>{{/each}}
-              </ul>
-            {{/if}}
-          </li>
-        {{/each}}
-      </ul>
-
-      <div class="publish-bar {{#if publishContext.isLive}}publish-bar-live{{/if}}">
-        <p class="publish-bar-summary"><strong>{{publishContext.modeLabel}}</strong> · <code>{{publishContext.accountName}}</code></p>
-        {{#if requiresAck}}
-          <label class="checkbox-row">
-            <input type="checkbox" name="confirmTargets" value="true" required />
-            <span>{{t "safety.ackLiveSelected"}}</span>
-          </label>
+  <section class="tile" aria-labelledby="maintenance-entries-heading">
+    <h2 id="maintenance-entries-heading">{{t "maintenanceReview.entries"}}</h2>
+    {{#if reviewEntries.length}}
+      <form method="post" action="/jobs/{{job.id}}/maintenance-publish" class="maintenance-publish-form" {{#if canPublish}}data-confirm="{{#if publishContext.isLive}}{{t "safety.confirmLiveSelected" account=publishContext.accountName wiki=publishContext.wikiLabel}}{{else}}{{t "safety.confirmSandboxSelected" account=publishContext.accountName}}{{/if}}"{{/if}}>
+        <input type="hidden" name="csrfToken" value="{{csrfToken}}">
+        <input type="hidden" name="mode" value="{{reviewMode}}">
+        {{#if canPublish}}
+          <div class="selection-tools">
+            <button type="button" class="button-quiet button-small" data-select-all>{{t "maintenanceReview.selectAll"}}</button>
+            <button type="button" class="button-quiet button-small" data-select-none>{{t "maintenanceReview.selectNone"}}</button>
+          </div>
         {{/if}}
-        <div class="publish-bar-actions">
-          {{#if canPublish}}
-            <button type="submit" data-processing-text="{{t "common.processing"}}" class="{{#if publishContext.isLive}}button-destructive{{/if}}">{{t "maintenanceReview.publish" mode=publishContext.modeLabel}}</button>
-          {{else}}
-            <button type="submit" disabled>{{t "maintenanceReview.unavailable"}}</button>
+        {{#each reviewGroups}}
+          <section class="maintenance-group" data-entry-group aria-labelledby="maintenance-group-{{type}}">
+            <div class="maintenance-group-header">
+              <h3 id="maintenance-group-{{type}}">{{label}} <span class="maintenance-group-count">({{entries.length}})</span></h3>
+              {{#if @root.canPublish}}{{#if hasMultiple}}<button type="button" class="button-quiet button-small" data-select-group>{{t "maintenanceReview.selectGroup"}}<span class="visually-hidden"> · {{label}}</span></button>{{/if}}{{/if}}
+            </div>
+            <ul class="maintenance-review-list">
+              {{#each entries}}
+                <li class="maintenance-review-card">
+                  <label class="maintenance-checkbox-row">
+                    <input type="checkbox" name="selected" value="{{id}}" {{#if selected}}checked{{/if}} {{#unless @root.canPublish}}disabled{{/unless}} />
+                    <span class="maintenance-card-title">{{label}}</span>
+                    <span class="status-pill publish-status-{{status}}">{{statusLabel}}</span>
+                  </label>
+                  <p class="artifact-copy">{{description}}</p>
+                  <dl class="target-facts">
+                    <div><dt>{{t "common.source"}}</dt><dd><code>{{liveTargetTitle}}</code></dd></div>
+                    <div><dt>{{t "maintenanceReview.publishTarget"}}</dt><dd><code>{{targetTitle}}</code></dd></div>
+                    <div><dt>{{t "common.review"}}</dt><dd>{{diffSummary}}</dd></div>
+                  </dl>
+                  {{#if excerpt.length}}
+                    <ul class="maintenance-bullet-list">
+                      {{#each excerpt}}<li>{{this}}</li>{{/each}}
+                    </ul>
+                  {{/if}}
+                </li>
+              {{/each}}
+            </ul>
+          </section>
+        {{/each}}
+
+        <div class="publish-bar {{#if publishContext.isLive}}publish-bar-live{{/if}}">
+          <p class="publish-bar-summary"><strong>{{publishContext.modeLabel}}</strong> · <code>{{publishContext.accountName}}</code></p>
+          {{#if requiresAck}}
+            <label class="checkbox-row">
+              <input type="checkbox" name="confirmTargets" value="true" required />
+              <span>{{t "safety.ackLiveSelected"}}</span>
+            </label>
           {{/if}}
-          <a href="/jobs/{{job.id}}/result">{{t "common.cancel"}}</a>
+          <div class="publish-bar-actions">
+            {{#if canPublish}}
+              <button type="submit" data-processing-text="{{t "common.processing"}}" class="button-primary{{#if publishContext.isLive}} button-destructive{{/if}}">{{t "maintenanceReview.publish" mode=publishContext.modeLabel}}</button>
+            {{else}}
+              <button type="submit" class="button-primary" disabled>{{t "maintenanceReview.unavailable"}}</button>
+            {{/if}}
+            <a href="/jobs/{{job.id}}/result">{{t "common.cancel"}}</a>
+          </div>
         </div>
-      </div>
-    </form>
-  {{else}}
-    <p class="empty-state">{{t "maintenanceReview.none"}}</p>
-  {{/if}}
-</section>
+      </form>
+    {{else}}
+      <p class="empty-state">{{t "maintenanceReview.none"}}</p>
+    {{/if}}
+  </section>
+</div>
