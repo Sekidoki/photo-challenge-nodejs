@@ -26,6 +26,9 @@ pnpm-debug.log*
 /output/config/*
 !/output/.gitkeep
 
+# Local design-review snapshots (impeccable)
+/.impeccable/
+
 # Editor and OS noise
 .vscode/
 .idea/
