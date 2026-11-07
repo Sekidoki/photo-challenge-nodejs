@@ -102,7 +102,7 @@ npm run build
 npm run check:assets
 ```
 
-相容性狀態：本機已在 Node.js `26.13.0`、npm `11.20.0` 驗證通過（2026-11-07），涵蓋型別檢查、139 項測試、建置與資產預算。本機 npm 低於 `engines` 要求的 `12.x`；Toolforge 建置使用 buildpack 的 npm，變更 lockfile 前應先將本機 npm 對齊。
+相容性狀態：本機已在 Node.js `26.13.0`、npm `12.2.2` 驗證通過（2026-11-07），涵蓋乾淨的 `npm ci`、型別檢查、139 項測試、建置、資產預算，以及 0 個漏洞的 `npm audit`。
 
 補充：
 - `.env` 不應進版控

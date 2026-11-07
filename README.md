@@ -101,7 +101,7 @@ npm run build
 npm run check:assets
 ```
 
-Compatibility status: local checks are verified on Node.js `26.13.0` with npm `11.20.0` (2026-11-07), including type checks, 139 tests, build, and asset budgets. The local npm is below the `engines` range (`12.x`); Toolforge builds use the buildpack's npm, so align the local npm before relying on lockfile changes.
+Compatibility status: local checks are verified on Node.js `26.13.0` with npm `12.2.2` (2026-11-07), including a clean `npm ci`, type checks, 139 tests, build, asset budgets, and an `npm audit` with 0 vulnerabilities.
 
 Notes:
 - keep `.env` out of version control
