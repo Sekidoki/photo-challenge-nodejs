@@ -54,7 +54,7 @@ Toolforge Build Service 使用根目錄的 `Procfile` 執行同一個 `npm start
 
 正式站位於 [photo-challenge.toolforge.org](https://photo-challenge.toolforge.org/)，使用單一 replica 的 Toolforge `buildservice` 並掛載持久儲存。正式站固定使用 OAuth 模式，不會顯示 BotPassword，也不會在 OAuth 設定異常時退回 BotPassword。
 
-目前 production baseline 於 2026-11-04 由 `main` 的 commit `2ac079c` 建置（build `photo-challenge-buildpacks-pipelinerun-7lzt8`）。Toolforge 已驗證的 runtime 為 Node.js `26.12.1`、npm `12.2.1`；重啟後 service 狀態為 running，`/healthz` 回應 HTTP 200。本次部署的 OAuth 登入與沙盒發布互動驗證已於 2026-11-04 完成。完整的 build、restart、驗證、rollback 與 SSH 操作規範請見架構文件。
+目前 production baseline 於 2026-11-07 由 `main` 的 commit `5e3448a` 建置（build `photo-challenge-buildpacks-pipelinerun-s97m7`）。本次 build 沿用上一版映像的 Node.js `26.12.1` runtime 層；npm 層重新建立，版本未在本次部署中再確認。重啟後 service 狀態為 running，`/healthz` 回應 HTTP 200，首頁已送出新的 Codex bento 版面。本次部署的 OAuth 登入與沙盒發布互動驗證尚待完成。完整的 build、restart、驗證、rollback 與 SSH 操作規範請見架構文件。
 
 ## 使用概覽
 
@@ -102,7 +102,7 @@ npm run build
 npm run check:assets
 ```
 
-相容性狀態：本機已在 Node.js `26.12.1`、npm `12.2.1` 驗證通過（2026-11-04），涵蓋型別檢查、135 項測試、建置與資產預算。Toolforge production 也以相同的 Node.js `26.12.1`、npm `12.2.1` 建置並通過 smoke check。
+相容性狀態：本機已在 Node.js `26.13.0`、npm `11.20.0` 驗證通過（2026-11-07），涵蓋型別檢查、139 項測試、建置與資產預算。本機 npm 低於 `engines` 要求的 `12.x`；Toolforge 建置使用 buildpack 的 npm，變更 lockfile 前應先將本機 npm 對齊。
 
 補充：
 - `.env` 不應進版控

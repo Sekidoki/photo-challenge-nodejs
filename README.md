@@ -53,7 +53,7 @@ Toolforge Build Service uses the root `Procfile` to run the same `npm start` ent
 
 The production application is deployed at [photo-challenge.toolforge.org](https://photo-challenge.toolforge.org/) as a single-replica Toolforge `buildservice` with persistent storage mounted. It runs in OAuth mode; the public UI never exposes or falls back to BotPassword authentication.
 
-The current production baseline was built on 2026-11-04 from `main` at commit `2ac079c` (build `photo-challenge-buildpacks-pipelinerun-7lzt8`). The verified Toolforge runtime is Node.js `26.12.1` with npm `12.2.1`; after the restart the service reported running and `/healthz` returned HTTP 200. The interactive OAuth sign-in and sandbox-publish checks for this deployment were completed on 2026-11-04. See the architecture document for the complete build, restart, verification, rollback, and SSH operating procedure.
+The current production baseline was built on 2026-11-07 from `main` at commit `5e3448a` (build `photo-challenge-buildpacks-pipelinerun-s97m7`). The build reused the Node.js `26.12.1` runtime layer from the previous image; the npm layer was rebuilt and its version was not re-checked during this deploy. After the restart the service reported running and `/healthz` returned HTTP 200, and the home page served the new Codex bento layout. The interactive OAuth sign-in and sandbox-publish checks for this deployment are still pending. See the architecture document for the complete build, restart, verification, rollback, and SSH operating procedure.
 
 ## Usage Overview
 
@@ -101,7 +101,7 @@ npm run build
 npm run check:assets
 ```
 
-Compatibility status: local checks are verified on Node.js `26.12.1` with npm `12.2.1` (2026-11-04), including type checks, 135 tests, build, and asset budgets. Toolforge production was built and smoke-checked with the same Node.js `26.12.1` and npm `12.2.1`.
+Compatibility status: local checks are verified on Node.js `26.13.0` with npm `11.20.0` (2026-11-07), including type checks, 139 tests, build, and asset budgets. The local npm is below the `engines` range (`12.x`); Toolforge builds use the buildpack's npm, so align the local npm before relying on lockfile changes.
 
 Notes:
 - keep `.env` out of version control
